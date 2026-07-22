@@ -37,10 +37,10 @@ jobs:
           <settings>
             <mirrors>
               <mirror>
-                <id>allow-http</id>
-                <mirrorOf>external:http:*</mirrorOf>
-                <url>http://maven.seasar.org/maven2</url>
-                <blocked>false</blocked>
+                <id>seasar-https-mirror</id>
+                <mirrorOf>maven.seasar.org</mirrorOf>
+                <name>Seasar HTTPS Mirror</name>
+                <url>https://maven.seasar.org/maven2</url>
               </mirror>
             </mirrors>
           </settings>
