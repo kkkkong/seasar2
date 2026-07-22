@@ -256,4 +256,10 @@ public class MockStatement implements Statement {
         this.queryTimeout = queryTimeout;
     }
 
+    public boolean isCloseOnCompletion() throws SQLException { 
+        return false; }
+    
+    public void closeOnCompletion() throws SQLException {
+    }
+
 }

@@ -51,4 +51,6 @@ public class MockDataSource implements DataSource {
 
     public void setLoginTimeout(int seconds) throws SQLException {
     }
+
+    public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException { return null; }
 }

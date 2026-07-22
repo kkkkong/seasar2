@@ -394,4 +394,12 @@ public class MockCallableStatement extends MockPreparedStatement implements
     public boolean wasNull() throws SQLException {
         return false;
     }
+
+    public <T> T getObject(String parameterName, Class<T> type) throws SQLException { 
+        return null; 
+    }
+    
+    public <T> T getObject(int parameterIndex, Class<T> type) throws SQLException { 
+        return null; 
+    }
 }

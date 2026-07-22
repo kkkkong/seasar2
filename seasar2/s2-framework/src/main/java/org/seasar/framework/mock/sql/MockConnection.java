@@ -416,4 +416,10 @@ public class MockConnection implements Connection {
 
     public void setTypeMap(Map arg0) throws SQLException {
     }
+
+    public int getNetworkTimeout() throws SQLException { return 0; }
+    public void setNetworkTimeout(java.util.concurrent.Executor executor, int milliseconds) throws SQLException {}
+    public void abort(java.util.concurrent.Executor executor) throws SQLException {}
+    public String getSchema() throws SQLException { return null; }
+    public void setSchema(String schema) throws SQLException {}
 }
