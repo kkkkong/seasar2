@@ -399,7 +399,8 @@ public class MockCallableStatement extends MockPreparedStatement implements
         return null; 
     }
     
-    public <T> T getObject(int parameterIndex, Class<T> type) throws SQLException { 
-        return null; 
-    }
+    public void setNClob(String parameterName, java.io.Reader reader) throws SQLException {}
+    public void setNClob(String parameterName, java.io.Reader reader, long length) throws SQLException {}
+    public Object getObject(String parameterName, Class type) throws SQLException { return null; }
+    public Object getObject(int parameterIndex, Class type) throws SQLException { return null; }
 }

@@ -359,6 +359,8 @@ public class MockPreparedStatement extends MockStatement implements
         this.columnNames = columnNames;
     }
 
-    public void setNClob(int parameterIndex, java.io.Reader reader) throws SQLException {
-    }
+    public void setBlob(int parameterIndex, java.io.InputStream inputStream) throws SQLException {}
+    public void setBlob(int parameterIndex, java.io.InputStream inputStream, long length) throws SQLException {}
+    public void setNClob(int parameterIndex, java.io.Reader reader) throws SQLException {}
+    public void setNClob(int parameterIndex, java.io.Reader reader, long length) throws SQLException {}
 }

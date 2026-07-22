@@ -20,7 +20,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 import javax.sql.DataSource;
-
+import java.sql.SQLFeatureNotSupportedException;
 /**
  * {@link DataSource}用のモッククラスです。
  * 
@@ -53,4 +53,7 @@ public class MockDataSource implements DataSource {
     }
 
     public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException { return null; }
+    public boolean isWrapperFor(Class iface) throws SQLException { return false; }
+    public Object unwrap(Class iface) throws SQLException { return null; }
+    
 }

@@ -868,6 +868,8 @@ public class MockResultSet implements ResultSet {
         return false;
     }
 
-    public <T> T getObject(String columnLabel, Class<T> type) throws SQLException { return null; }
-    public <T> T getObject(int columnIndex, Class<T> type) throws SQLException { return null; }
+    public void updateNClob(String columnLabel, java.io.Reader reader) throws SQLException {}
+    public void updateNClob(int columnIndex, java.io.Reader reader) throws SQLException {}
+    public Object getObject(String columnLabel, Class type) throws SQLException { return null; }
+    public Object getObject(int columnIndex, Class type) throws SQLException { return null; }
 }
