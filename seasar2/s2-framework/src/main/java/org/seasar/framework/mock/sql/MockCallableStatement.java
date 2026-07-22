@@ -394,13 +394,10 @@ public class MockCallableStatement extends MockPreparedStatement implements
     public boolean wasNull() throws SQLException {
         return false;
     }
-
-    public <T> T getObject(String parameterName, Class<T> type) throws SQLException { 
-        return null; 
-    }
     
     public void setNClob(String parameterName, java.io.Reader reader) throws SQLException {}
     public void setNClob(String parameterName, java.io.Reader reader, long length) throws SQLException {}
-    public Object getObject(String parameterName, Class type) throws SQLException { return null; }
-    public Object getObject(int parameterIndex, Class type) throws SQLException { return null; }
+    public <T> T getObject(String parameterName, Class<T> type) throws SQLException { return null; }
+    public <T> T getObject(int parameterIndex, Class<T> type) throws SQLException { return null; }
+    public void setBlob(String parameterName, java.io.InputStream inputStream) throws SQLException {}
 }
