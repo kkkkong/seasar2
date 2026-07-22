@@ -30,23 +30,33 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      # 1. Build seasar2 (เพิ่ม -Dmaven.wagon.http.ssl.insecure=true และสั่งผ่าน HTTP Blocker)
+      # Step 1: สร้าง custom settings.xml เพื่อปลดล็อก HTTP Blocker ของ Maven
+      - name: Create Maven settings.xml
+        run: |
+          mkdir -p ~/.m2
+          cat << 'EOF' > ~/.m2/settings.xml
+          <settings>
+            <mirrors>
+              <!-- ปลดล็อก http-blocker โดยส่งต่อ http repository ให้ไปดาวน์โหลดได้ปกติ -->
+              <mirror>
+                <id>allow-http</id>
+                <mirrorOf>external:http:*</mirrorOf>
+                <url>http://maven.seasar.org/maven2</url>
+                <blocked>false</blocked>
+              </mirror>
+            </mirrors>
+          </settings>
+          EOF
+
+      # Step 2: สั่ง Build โดยระบุ -s ~/.m2/settings.xml
       - name: Build Core Framework (seasar2)
         working-directory: ./seasar2
-        run: mvn -B -V -e install -DskipTests -DallowInsecure=true -DsuppressUnresolvableInInsecureRepositories=true -Dmaven.resolver.transport=wagon
-        env:
-          MAVEN_OPTS: "-Dmaven.wagon.http.insecure=true -Dmaven.wagon.http.ssl.insecure=true"
+        run: mvn -B -V -e install -DskipTests -s ~/.m2/settings.xml
 
-      # 2. Build s2-tiger
       - name: Build s2-tiger
         working-directory: ./s2-tiger
-        run: mvn -B -V -e install -DskipTests
-        env:
-          MAVEN_OPTS: "-Dmaven.wagon.http.insecure=true -Dmaven.wagon.http.ssl.insecure=true"
+        run: mvn -B -V -e install -DskipTests -s ~/.m2/settings.xml
 
-      # 3. Build s2jdbc-gen
       - name: Build s2jdbc-gen
         working-directory: ./s2jdbc-gen
-        run: mvn -B -V -e install -DskipTests
-        env:
-          MAVEN_OPTS: "-Dmaven.wagon.http.insecure=true -Dmaven.wagon.http.ssl.insecure=true"
+        run: mvn -B -V -e install -DskipTests -s ~/.m2/settings.xml
