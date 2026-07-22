@@ -30,14 +30,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      # Step 1: สร้าง custom settings.xml เพื่อปลดล็อก HTTP Blocker ของ Maven
       - name: Create Maven settings.xml
         run: |
           mkdir -p ~/.m2
           cat << 'EOF' > ~/.m2/settings.xml
           <settings>
             <mirrors>
-              <!-- ปลดล็อก http-blocker โดยส่งต่อ http repository ให้ไปดาวน์โหลดได้ปกติ -->
               <mirror>
                 <id>allow-http</id>
                 <mirrorOf>external:http:*</mirrorOf>
@@ -48,15 +46,15 @@ jobs:
           </settings>
           EOF
 
-      # Step 2: สั่ง Build โดยระบุ -s ~/.m2/settings.xml
+      # เพิ่ม -Dmaven.compiler.source=1.5 -Dmaven.compiler.target=1.5 เพื่อรองรับ Class JDBC แบบเก่า
       - name: Build Core Framework (seasar2)
         working-directory: ./seasar2
-        run: mvn -B -V -e install -DskipTests -s ~/.m2/settings.xml
+        run: mvn -B -V -e install -DskipTests -s ~/.m2/settings.xml -Dmaven.compiler.source=1.5 -Dmaven.compiler.target=1.5
 
       - name: Build s2-tiger
         working-directory: ./s2-tiger
-        run: mvn -B -V -e install -DskipTests -s ~/.m2/settings.xml
+        run: mvn -B -V -e install -DskipTests -s ~/.m2/settings.xml -Dmaven.compiler.source=1.5 -Dmaven.compiler.target=1.5
 
       - name: Build s2jdbc-gen
         working-directory: ./s2jdbc-gen
-        run: mvn -B -V -e install -DskipTests -s ~/.m2/settings.xml
+        run: mvn -B -V -e install -DskipTests -s ~/.m2/settings.xml -Dmaven.compiler.source=1.5 -Dmaven.compiler.target=1.5
