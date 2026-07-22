@@ -22,7 +22,6 @@ jobs:
           distribution: temurin
           java-version: ${{ matrix.java }}
 
-      # Step Cache ของคุณ (เก็บไว้ตรงนี้ได้เลย)
       - name: Cache Maven packages
         uses: actions/cache@v4
         with:
@@ -31,15 +30,23 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      # สั่ง Build เรียงตามลำดับ Sub-modules
+      # 1. Build seasar2 (เพิ่ม -Dmaven.wagon.http.ssl.insecure=true และสั่งผ่าน HTTP Blocker)
       - name: Build Core Framework (seasar2)
         working-directory: ./seasar2
-        run: mvn -B -V -e install -DskipTests
+        run: mvn -B -V -e install -DskipTests -DallowInsecure=true -DsuppressUnresolvableInInsecureRepositories=true -Dmaven.resolver.transport=wagon
+        env:
+          MAVEN_OPTS: "-Dmaven.wagon.http.insecure=true -Dmaven.wagon.http.ssl.insecure=true"
 
+      # 2. Build s2-tiger
       - name: Build s2-tiger
         working-directory: ./s2-tiger
         run: mvn -B -V -e install -DskipTests
+        env:
+          MAVEN_OPTS: "-Dmaven.wagon.http.insecure=true -Dmaven.wagon.http.ssl.insecure=true"
 
+      # 3. Build s2jdbc-gen
       - name: Build s2jdbc-gen
         working-directory: ./s2jdbc-gen
         run: mvn -B -V -e install -DskipTests
+        env:
+          MAVEN_OPTS: "-Dmaven.wagon.http.insecure=true -Dmaven.wagon.http.ssl.insecure=true"
