@@ -10,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [8, 11]
+        java: [8]
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -21,6 +22,7 @@ jobs:
           distribution: temurin
           java-version: ${{ matrix.java }}
 
+      # Step Cache ของคุณ (เก็บไว้ตรงนี้ได้เลย)
       - name: Cache Maven packages
         uses: actions/cache@v4
         with:
@@ -29,5 +31,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      - name: Build with Maven
-        run: mvn -B -V -e -DskipTests=false package
+      # สั่ง Build เรียงตามลำดับ Sub-modules
+      - name: Build Core Framework (seasar2)
+        working-directory: ./seasar2
+        run: mvn -B -V -e install -DskipTests
+
+      - name: Build s2-tiger
+        working-directory: ./s2-tiger
+        run: mvn -B -V -e install -DskipTests
+
+      - name: Build s2jdbc-gen
+        working-directory: ./s2jdbc-gen
+        run: mvn -B -V -e install -DskipTests
