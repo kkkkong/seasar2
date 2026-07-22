@@ -364,4 +364,6 @@ public class MockPreparedStatement extends MockStatement implements
     public void setNClob(int parameterIndex, java.io.Reader reader) throws SQLException {}
     public void setNClob(int parameterIndex, java.io.Reader reader, long length) throws SQLException {}
     public void setClob(int parameterIndex, java.io.Reader reader) throws SQLException {}
+    public void setNCharacterStream(int parameterIndex, java.io.Reader reader) throws SQLException {}
+    public void setNCharacterStream(int parameterIndex, java.io.Reader reader, long length) throws SQLException {}
 }
