@@ -1,2 +1,14 @@
-/.idea/
-*.iml
+# IntelliJ IDEA
+**/.idea/
+**/*.iml
+
+# VS Code
+**/.vscode/
+
+# Eclipse
+**/.settings/
+**/.classpath
+**/.project
+
+# Build output
+**/target/
