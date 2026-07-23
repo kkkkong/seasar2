@@ -27,8 +27,8 @@
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
           <configuration>
-            <source>1.5</source>
-            <target>1.5</target>
+            <source>1.8</source>
+            <target>1.8</target>
             <encoding>UTF-8</encoding>
           </configuration>
         </plugin>
@@ -124,7 +124,7 @@
     <dependency>
       <groupId>com.sun</groupId>
       <artifactId>tools</artifactId>
-      <version>${java.version}</version>
+      <version>1.8.0</version>
       <scope>system</scope>
       <systemPath>${java.home}/../lib/tools.jar</systemPath>
       <optional>true</optional>
