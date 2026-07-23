@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.sql.ConnectionEventListener;
+import javax.sql.StatementEventListener;
 import javax.sql.XAConnection;
 import javax.transaction.xa.XAResource;
 
@@ -75,5 +76,39 @@ public class XAConnectionImpl implements XAConnection {
     public synchronized void removeConnectionEventListener(
             final ConnectionEventListener listener) {
         listeners.remove(listener);
+    }
+
+    /**
+     * Registers a <code>StatementEventListener</code> with this <code>PooledConnection</code> object.  Components that
+     * wish to be notified when  <code>PreparedStatement</code>s created by the
+     * connection are closed or are detected to be invalid may use this method
+     * to register a <code>StatementEventListener</code> with this <code>PooledConnection</code> object.
+     * <p>
+     *
+     * @param listener an component which implements the <code>StatementEventListener</code>
+     *                 interface that is to be registered with this <code>PooledConnection</code> object
+     *                 <p>
+     * @since 1.6
+     */
+    @Override
+    public void addStatementEventListener(StatementEventListener listener) {
+
+    }
+
+    /**
+     * Removes the specified <code>StatementEventListener</code> from the list of
+     * components that will be notified when the driver detects that a
+     * <code>PreparedStatement</code> has been closed or is invalid.
+     * <p>
+     *
+     * @param listener the component which implements the
+     *                 <code>StatementEventListener</code> interface that was previously
+     *                 registered with this <code>PooledConnection</code> object
+     *                 <p>
+     * @since 1.6
+     */
+    @Override
+    public void removeStatementEventListener(StatementEventListener listener) {
+
     }
 }
