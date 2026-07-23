@@ -49,12 +49,12 @@ jobs:
       # เพิ่ม -Dmaven.compiler.source=1.5 -Dmaven.compiler.target=1.5 เพื่อรองรับ Class JDBC แบบเก่า
       - name: Build Core Framework (seasar2)
         working-directory: ./seasar2
-        run: mvn -B -V -e install -DskipTests -s ~/.m2/settings.xml -Dmaven.compiler.source=1.5 -Dmaven.compiler.target=1.5
+        run: mvn -B -V -e install -DskipTests -s ~/.m2/settings.xml -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8
 
       - name: Build s2-tiger
         working-directory: ./s2-tiger
-        run: mvn -B -V -e install -DskipTests -s ~/.m2/settings.xml -Dmaven.compiler.source=1.5 -Dmaven.compiler.target=1.5
+        run: mvn -B -V -e install -DskipTests -s ~/.m2/settings.xml -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8
 
       - name: Build s2jdbc-gen
         working-directory: ./s2jdbc-gen
-        run: mvn -B -V -e install -DskipTests -s ~/.m2/settings.xml -Dmaven.compiler.source=1.5 -Dmaven.compiler.target=1.5
+        run: mvn -B -V -e install -DskipTests -s ~/.m2/settings.xml -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8
