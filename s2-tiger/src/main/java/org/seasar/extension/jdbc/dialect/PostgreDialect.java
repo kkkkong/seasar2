@@ -310,6 +310,48 @@ public class PostgreDialect extends StandardDialect {
             throw new UnsupportedOperationException("truncate");
         }
 
+        /**
+         * This method frees the <code>Blob</code> object and releases the resources that
+         * it holds. The object is invalid once the <code>free</code>
+         * method is called.
+         * <p>
+         * After <code>free</code> has been called, any attempt to invoke a
+         * method other than <code>free</code> will result in a <code>SQLException</code>
+         * being thrown.  If <code>free</code> is called multiple times, the subsequent
+         * calls to <code>free</code> are treated as a no-op.
+         * <p>
+         *
+         * @throws SQLException                    if an error occurs releasing
+         *                                         the Blob's resources
+         * @throws SQLFeatureNotSupportedException if the JDBC driver does not support
+         *                                         this method
+         * @since 1.6
+         */
+        @Override
+        public void free() throws SQLException {
+
+        }
+
+        /**
+         * Returns an <code>InputStream</code> object that contains a partial <code>Blob</code> value,
+         * starting  with the byte specified by pos, which is length bytes in length.
+         *
+         * @param pos    the offset to the first byte of the partial value to be retrieved.
+         *               The first byte in the <code>Blob</code> is at position 1
+         * @param length the length in bytes of the partial value to be retrieved
+         * @return <code>InputStream</code> through which the partial <code>Blob</code> value can be read.
+         * @throws SQLException                    if pos is less than 1 or if pos is greater than the number of bytes
+         *                                         in the <code>Blob</code> or if pos + length is greater than the number of bytes
+         *                                         in the <code>Blob</code>
+         * @throws SQLFeatureNotSupportedException if the JDBC driver does not support
+         *                                         this method
+         * @since 1.6
+         */
+        @Override
+        public InputStream getBinaryStream(long pos, long length) throws SQLException {
+            return null;
+        }
+
     }
 
 }
