@@ -17,7 +17,7 @@
 
   <!-- More Project Information -->
   <name>S2JDBC-GEN-IT</name>
-  <url>http://s2container.seasar.org/</url>
+  <url>https://s2container.seasar.org/</url>
 
   <!-- Profiles -->
   <profiles>
@@ -139,8 +139,8 @@
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
           <configuration>
-            <source>1.5</source>
-            <target>1.5</target>
+            <source>1.8</source>
+            <target>1.8</target>
             <encoding>UTF-8</encoding>
           </configuration>
         </plugin>
