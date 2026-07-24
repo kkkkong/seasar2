@@ -131,6 +131,11 @@ public class AspectWeaver {
      */
     public void setInterceptors(final Method method,
             final MethodInterceptor[] interceptors) {
+
+        if (method.isDefault() || method.isSynthetic()) {
+            return;
+        }
+
         final String methodInvocationClassName = getMethodInvocationClassName(method);
         final MethodInvocationClassGenerator methodInvocationGenerator = new MethodInvocationClassGenerator(
                 classPool, methodInvocationClassName, enhancedClassName);
