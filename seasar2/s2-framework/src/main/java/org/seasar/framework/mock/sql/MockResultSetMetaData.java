@@ -153,4 +153,7 @@ public class MockResultSetMetaData implements ResultSetMetaData {
         }
         throw new SQLException(columnName + " not found.");
     }
+
+    public boolean isWrapperFor(Class<?> iface) throws SQLException { return false; }
+    public <T> T unwrap(Class<T> iface) throws SQLException { return null; }
 }

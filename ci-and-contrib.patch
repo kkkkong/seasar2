@@ -1,0 +1,185 @@
+*** Begin Patch
+*** Add File: .github/ISSUE_TEMPLATE.md
++<!-- Issue template for bug reports and feature requests -->
++
++- If you're reporting a bug: provide a clear title, the steps to reproduce, and the exact behavior you're seeing.
++- If you're requesting a feature: provide the problem you're trying to solve and a proposed solution or use case.
++
++---
++
++### Expected Behavior
++
++<!-- A clear and concise description of what you expected to happen. -->
++
++### Current Behavior
++
++<!-- A clear and concise description of what is actually happening. -->
++
++### Steps to Reproduce (for bugs)
++
++1. <!-- step 1 -->
++2. <!-- step 2 -->
++3. <!-- and so on -->
++
++### Environment
++- OS: <!-- e.g. Ubuntu 20.04, macOS 11.3 -->
++- Java version: <!-- e.g. 8u202 -->
++- Maven version: <!-- e.g. 3.6.3 -->
++
++### Additional Context
++<!-- Add any other context about the problem here. -->
++
++---
++Labels (suggested):
++- bug
++- enhancement
++- help wanted
++
+*** End Patch
+*** Begin Patch
+*** Add File: .github/PULL_REQUEST_TEMPLATE.md
++<!-- Pull Request template -->
++
++## Description
++
++Please include a summary of the change and which issue is fixed. Also include relevant motivation and context.
++
++Fixes # (issue)
++
++## Type of change
++
++- Bug fix (non-breaking change)
++- New feature (non-breaking change)
++- Breaking change
++
++## Checklist
++
++- [ ] I have read the contributor guidelines in CONTRIBUTING.md
++- [ ] My code follows the project's code style
++- [ ] I added tests that prove my fix is effective or that my feature works
++- [ ] All new and existing tests passed
++- [ ] I updated the documentation (if required)
++
++## How to test
++
++Explain how to run the tests or verify the changes.
++
+*** End Patch
+*** Begin Patch
+*** Add File: CONTRIBUTING.md
++# Contributing to seasar2
++
++Thank you for considering contributing to this project! This document provides a short guide to help you get started.
++
++## Code of Conduct
++
++By participating in this project you agree to abide by the project's Code of Conduct. See CODE_OF_CONDUCT.md for details.
++
++## Getting the code
++
++Clone the repository and switch to the default branch:
++
++```bash
++git clone https://github.com/kkkkong/seasar2.git
++cd seasar2
++git checkout master
++```
++
++Or work from your fork/branch as preferred.
++
++## Build & Test (Maven)
++
++This repository uses Maven as its build tool. To build the project run:
++
++```bash
++mvn -B -DskipTests=false package
++```
++
++To run tests:
++
++```bash
++mvn test
++```
++
++If you want to build without running tests (fast):
++
++```bash
++mvn -DskipTests package
++```
++
++## Development checklist
++
++Before opening a pull request, please ensure:
++
++- [ ] You have included or updated tests for your changes
++- [ ] Formatting and coding conventions are followed
++- [ ] All tests pass locally (mvn test)
++- [ ] You have added or updated documentation if applicable
++
++## Pull Requests
++
++- Create a branch for your changes (e.g., `feature/my-change`)
++- Open a pull request against `master` (or the default branch)
++- Use the provided PR template to describe your changes
++
++## Reporting issues
++
++Please use the issue template when filing bug reports or feature requests. Provide as much information as possible (steps to reproduce, environment, logs).
++
++## CI and checks
++
++We run a Maven CI workflow that builds the project and runs tests on Linux across supported Java versions. If your change requires extra checks (linters, code formatters), please document them in CONTRIBUTING.md or add CI steps as part of your PR.
++
++## Contact
++
++If you need to reach the maintainers, see CODE_OF_CONDUCT.md for the contact placeholder.
++
+*** End Patch
+*** Begin Patch
+*** Add File: .github/workflows/maven-ci.yml
++name: Maven CI
++on:
++  push:
++    branches: [ master, ci-and-contrib ]
++  pull_request:
++    branches: [ master ]
++
++jobs:
++  build:
++    runs-on: ubuntu-latest
++    strategy:
++      matrix:
++        java: [8, 11]
++    steps:
++      - name: Checkout code
++        uses: actions/checkout@v4
++
++      - name: Set up JDK
++        uses: actions/setup-java@v4
++        with:
++          distribution: temurin
++          java-version: ${{ matrix.java }}
++
++      - name: Cache Maven packages
++        uses: actions/cache@v4
++        with:
++          path: ~/.m2/repository
++          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
++          restore-keys: |
++            ${{ runner.os }}-maven-
++
++      - name: Build with Maven
++        run: mvn -B -V -e -DskipTests=false package
++
+*** End Patch
+*** Begin Patch
+*** Add File: DEVELOPMENT.md
++## Development
++
++This project uses Maven as its build tool. You can build the code and run tests locally as described in CONTRIBUTING.md. The repository contains multiple modules with pom.xml files (e.g., s2-tiger/pom.xml, s2jdbc-gen/pom.xml), so running `mvn package` at the repository root will build the project.
++
++Badge suggestion to add to README.md:
++
++[![CI](https://github.com/kkkkong/seasar2/actions/workflows/maven-ci.yml/badge.svg)](https://github.com/kkkkong/seasar2/actions)
++
+*** End Patch

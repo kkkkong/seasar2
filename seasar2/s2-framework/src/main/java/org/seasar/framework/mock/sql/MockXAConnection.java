@@ -70,4 +70,7 @@ public class MockXAConnection implements XAConnection {
             final ConnectionEventListener listener) {
     }
 
+    public void removeStatementEventListener(javax.sql.StatementEventListener listener) {}
+    public void addStatementEventListener(javax.sql.StatementEventListener listener) {}
+
 }

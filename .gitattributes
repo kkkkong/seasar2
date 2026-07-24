@@ -1,0 +1,2 @@
+# Force .txt files in test resources to use LF line endings on every OS
+/s2-framework/src/test/**/*.txt text eol=lf

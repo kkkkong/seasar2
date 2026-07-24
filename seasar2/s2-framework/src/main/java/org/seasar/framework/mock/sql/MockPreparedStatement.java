@@ -358,4 +358,23 @@ public class MockPreparedStatement extends MockStatement implements
     public void setColumnNames(String[] columnNames) {
         this.columnNames = columnNames;
     }
+
+    public void setAsciiStream(int parameterIndex, java.io.InputStream x) throws SQLException {}
+    public void setAsciiStream(int parameterIndex, java.io.InputStream x, long length) throws SQLException {}
+    public void setCharacterStream(int parameterIndex, java.io.Reader reader) throws SQLException {}
+    public void setCharacterStream(int parameterIndex, java.io.Reader reader, long length) throws SQLException {}
+    public void setBinaryStream(int parameterIndex, java.io.InputStream x) throws SQLException {}
+    public void setBinaryStream(int parameterIndex, java.io.InputStream x, long length) throws SQLException {}
+    public void setNCharacterStream(int parameterIndex, java.io.Reader reader) throws SQLException {}
+    public void setNCharacterStream(int parameterIndex, java.io.Reader reader, long length) throws SQLException {}
+    public void setClob(int parameterIndex, java.io.Reader reader) throws SQLException {}
+    public void setClob(int parameterIndex, java.io.Reader reader, long length) throws SQLException {}
+    public void setBlob(int parameterIndex, java.io.InputStream inputStream) throws SQLException {}
+    public void setBlob(int parameterIndex, java.io.InputStream inputStream, long length) throws SQLException {}
+    public void setNClob(int parameterIndex, java.sql.NClob value) throws SQLException {}
+    public void setNClob(int parameterIndex, java.io.Reader reader) throws SQLException {}
+    public void setNClob(int parameterIndex, java.io.Reader reader, long length) throws SQLException {}
+    public void setNString(int parameterIndex, String value) throws SQLException {}
+    public void setRowId(int parameterIndex, java.sql.RowId x) throws SQLException {}
+    public void setSQLXML(int parameterIndex, java.sql.SQLXML xmlObject) throws SQLException {}
 }

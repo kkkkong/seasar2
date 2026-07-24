@@ -256,4 +256,11 @@ public class MockStatement implements Statement {
         this.queryTimeout = queryTimeout;
     }
 
+    public boolean isPoolable() throws SQLException { return false; }
+    public void setPoolable(boolean poolable) throws SQLException {}
+    public boolean isCloseOnCompletion() throws SQLException { return false; }
+    public void closeOnCompletion() throws SQLException {}
+    public boolean isWrapperFor(Class iface) throws SQLException { return false; }
+    public Object unwrap(Class iface) throws SQLException { return null; }
+
 }

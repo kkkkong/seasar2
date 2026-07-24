@@ -25,21 +25,21 @@ Before you start contributing, ensure you have:
 
 ```bash
 # 1. Fork the repository on GitHub
-# Visit: https://github.com/seasarorg/seasar2
+# Visit: https://github.com/kkkkong/seasar2
 
 # 2. Clone your fork locally
-git clone https://github.com/<your-username>/seasar2.git
+git clone https://github.com/kkkkong/seasar2.git
 cd seasar2
 
 # 3. Add upstream remote to track original repository
-git remote add upstream https://github.com/seasarorg/seasar2.git
+git remote add upstream https://github.com/kkkkong/seasar2.git
 
 # 4. Verify remotes
 git remote -v
 # origin    https://github.com/<your-username>/seasar2.git (fetch)
 # origin    https://github.com/<your-username>/seasar2.git (push)
-# upstream  https://github.com/seasarorg/seasar2.git (fetch)
-# upstream  https://github.com/seasarorg/seasar2.git (push)
+# upstream  https://github.com/kkkkong/seasar2.git (fetch)
+# upstream  https://github.com/kkkkong/seasar2.git (push)
 ```
 
 ### Build the Project Locally
@@ -70,7 +70,7 @@ mvn test
 Found a bug? We'd love to hear about it!
 
 **Before Submitting:**
-- Check existing [issues](https://github.com/seasarorg/seasar2/issues) to avoid duplicates
+- Check existing [https://github.com/kkkkong/seasar2/issues](https://github.com/kkkkong/seasar2/issues) to avoid duplicates
 - Test with the latest version
 - Provide a minimal reproducible example
 

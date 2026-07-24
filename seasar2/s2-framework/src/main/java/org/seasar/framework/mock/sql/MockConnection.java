@@ -416,4 +416,23 @@ public class MockConnection implements Connection {
 
     public void setTypeMap(Map arg0) throws SQLException {
     }
+
+    public java.sql.Struct createStruct(String typeName, Object[] attributes) throws SQLException { return null; }
+    public java.sql.Array createArrayOf(String typeName, Object[] elements) throws SQLException { return null; }
+    public java.sql.NClob createNClob() throws SQLException { return null; }
+    public java.sql.Blob createBlob() throws SQLException { return null; }
+    public java.sql.Clob createClob() throws SQLException { return null; }
+    public java.sql.SQLXML createSQLXML() throws SQLException { return null; }
+    public boolean isValid(int timeout) throws SQLException { return true; }
+    public void setClientInfo(String name, String value) throws java.sql.SQLClientInfoException {}
+    public void setClientInfo(java.util.Properties properties) throws java.sql.SQLClientInfoException {}
+    public String getClientInfo(String name) throws SQLException { return null; }
+    public java.util.Properties getClientInfo() throws SQLException { return null; }
+    public int getNetworkTimeout() throws SQLException { return 0; }
+    public void setNetworkTimeout(java.util.concurrent.Executor executor, int milliseconds) throws SQLException {}
+    public void abort(java.util.concurrent.Executor executor) throws SQLException {}
+    public String getSchema() throws SQLException { return null; }
+    public void setSchema(String schema) throws SQLException {}
+    public boolean isWrapperFor(Class iface) throws SQLException { return false; }
+    public Object unwrap(Class iface) throws SQLException { return null; }
 }
