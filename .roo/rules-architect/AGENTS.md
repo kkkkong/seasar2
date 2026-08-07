@@ -1,0 +1,10 @@
+# Architecture Rules (Non-Obvious)
+
+- **Deploy mode determines component creation strategy**: HOT deploy uses `HotdeployClassLoader` (reloads .class per request), COOL deploy auto-registers components via `CoolComponentAutoRegister`, WARM deploy creates components on first access via `WarmdeployBehavior`. NORMAL mode uses explicit dicon registration only.
+- **`S2ContainerBehavior.Provider` is the primary extension point** — not subclassing `S2ContainerImpl`. All four modes (HOT/COOL/WARM/NORMAL) implement this interface. DefaultProvider in `S2ContainerFactory$DefaultProvider` handles Normal mode.
+- **`S2ContainerFactory` initialization is lazy**: First call to `create()` or `configure()` triggers one-time init via `configurationContainer`. Config dicon path resolved from system property `FACTORY_CONFIG_KEY` or defaults to `s2container.dicon`.
+- **Inter-module test-jar coupling**: `s2-extension` test classes depend on `s2-framework` test-jar. `s2-tiger` test classes depend on both `s2-framework` and `s2-extension` test-jars. Breaking changes in test utilities cascade.
+- **`TooManyRegistrationComponentDef` is a sentinel**: When multiple components share the same key, the container wraps them silently. Actual failure only occurs when `getComponent(key)` is called with an ambiguous key.
+- **Three distinct ClassLoader strategies**: Normal (standard CL), HOT deploy (`HotdeployClassLoader` per-request), Unit test (`UnitClassLoader` wrapping original CL). `S2FrameworkTestCase.setUpContainer()` always sets a `UnitClassLoader`.
+- **`NamingConvention` interface is near-ubiquitous**: Used by auto-registration, component creators, deployers, and HOT deploy. The default impl `NamingConventionImpl` maps component names ↔ class names using conventions like `_` → `.` splitting and `Impl` suffix detection.
+- **ExternalContext integration**: `S2ContainerServlet` integrates with Servlet API via `HttpServletExternalContext`. Test framework uses `MockServletContextImpl`/`MockHttpServletRequest` without needing a real servlet container.
