@@ -74,7 +74,37 @@ public class TxAttributeCustomizer extends AbstractCustomizer {
         final TransactionAttributeType classAttributeType = classAttribute != null ? classAttribute
                 .value()
                 : defaultAttributeType;
-        for (final Method method : componentClass.getMethods()) {
+        // Class.getDeclaredMethods() returns methods in JVM-dependent order
+        // under -noverify (verified on JDK 8: order flips between runs), which
+        // would make the aspect order non-deterministic. Read the method
+        // declaration order from the class file via javassist instead.
+        final javassist.ClassPool pool = org.seasar.framework.util.ClassPoolUtil
+                .getClassPool(componentClass);
+        final javassist.CtClass ctClass = org.seasar.framework.util.ClassPoolUtil
+                .toCtClass(pool, componentClass);
+        final String[] methodNames;
+        synchronized (ctClass) {
+            final javassist.CtMethod[] ctMethods = ctClass
+                    .getDeclaredMethods();
+            methodNames = new String[ctMethods.length];
+            for (int i = 0; i < ctMethods.length; ++i) {
+                methodNames[i] = ctMethods[i].getName();
+            }
+        }
+        final Method[] declaredMethods = componentClass.getDeclaredMethods();
+        final Method[] methods = new Method[methodNames.length];
+        int index = 0;
+        for (int i = 0; i < methodNames.length; ++i) {
+            for (int j = 0; j < declaredMethods.length; ++j) {
+                if (declaredMethods[j] != null
+                        && methodNames[i].equals(declaredMethods[j].getName())) {
+                    methods[index++] = declaredMethods[j];
+                    declaredMethods[j] = null;
+                    break;
+                }
+            }
+        }
+        for (final Method method : methods) {
             if (method.isSynthetic() || method.isBridge()) {
                 continue;
             }

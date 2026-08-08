@@ -45,7 +45,38 @@ public class SAXParserFactoryUtil {
      * @return {@link SAXParserFactory}の新しいインスタンス
      */
     public static SAXParserFactory newInstance() {
-        return SAXParserFactory.newInstance();
+        SAXParserFactory factory = SAXParserFactory.newInstance();
+        try {
+            factory.setFeature(
+                "http://apache.org/xml/features/disallow-doctype-decl",
+                true);
+        } catch (Throwable e) {
+            // ignore if not supported (old parsers may throw
+            // AbstractMethodError or UnsupportedOperationException)
+        }
+        try {
+            factory.setFeature(
+                "http://xml.org/sax/features/external-general-entities",
+                false);
+        } catch (Throwable e) {
+            // ignore if not supported (old parsers may throw
+            // AbstractMethodError or UnsupportedOperationException)
+        }
+        try {
+            factory.setFeature(
+                "http://xml.org/sax/features/external-parameter-entities",
+                false);
+        } catch (Throwable e) {
+            // ignore if not supported (old parsers may throw
+            // AbstractMethodError or UnsupportedOperationException)
+        }
+        try {
+            factory.setXIncludeAware(false);
+        } catch (Throwable e) {
+            // ignore if not supported (old parsers may throw
+            // AbstractMethodError or UnsupportedOperationException)
+        }
+        return factory;
     }
 
     /**

@@ -1,2 +1,6 @@
 # Force .txt files in test resources to use LF line endings on every OS
 /s2-framework/src/test/**/*.txt text eol=lf
+
+# DumpFileReaderTest_quotedCRLF.csv asserts CRLF inside quoted CSV values;
+# preserve exact bytes on every OS so git never normalizes it to LF.
+/s2jdbc-gen/src/test/resources/org/seasar/extension/jdbc/gen/internal/data/DumpFileReaderTest_quotedCRLF.csv -text
