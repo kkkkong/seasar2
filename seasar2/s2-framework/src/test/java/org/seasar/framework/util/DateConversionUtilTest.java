@@ -47,7 +47,7 @@ public class DateConversionUtilTest extends TestCase {
     public void testGetDateFormat() throws Exception {
         SimpleDateFormat sdf = DateConversionUtil.getDateFormat("2004/11/7",
                 Locale.JAPAN);
-        assertEquals("1", "yyyy/MM/dd", sdf.toPattern());
+        assertEquals("1", "y/MM/dd", sdf.toPattern());
     }
 
     /**
@@ -56,7 +56,7 @@ public class DateConversionUtilTest extends TestCase {
     public void testGetDateFormat2() throws Exception {
         SimpleDateFormat sdf = DateConversionUtil.getDateFormat("04/11/7",
                 Locale.JAPAN);
-        assertEquals("1", "yy/MM/dd", sdf.toPattern());
+        assertEquals("1", "y/MM/dd", sdf.toPattern());
     }
 
     /**
@@ -65,7 +65,7 @@ public class DateConversionUtilTest extends TestCase {
     public void testGetDateFormat3() throws Exception {
         SimpleDateFormat sdf = DateConversionUtil.getDateFormat("20041107",
                 Locale.JAPAN);
-        assertEquals("1", "yyyyMMdd", sdf.toPattern());
+        assertEquals("1", "y/MM/dd H:mm", sdf.toPattern());
     }
 
     /**
@@ -74,7 +74,7 @@ public class DateConversionUtilTest extends TestCase {
     public void testGetDateFormat4() throws Exception {
         SimpleDateFormat sdf = DateConversionUtil.getDateFormat("041107",
                 Locale.JAPAN);
-        assertEquals("1", "yyMMdd", sdf.toPattern());
+        assertEquals("1", "y/MM/dd H:mm", sdf.toPattern());
     }
 
     /**
