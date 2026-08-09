@@ -16,6 +16,7 @@
 package org.seasar.extension.jdbc.gen.internal.meta;
 
 import java.io.File;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -33,8 +34,6 @@ import org.seasar.framework.util.ClassTraversal;
 import org.seasar.framework.util.ClassUtil;
 import org.seasar.framework.util.ClassTraversal.ClassHandler;
 
-import com.sun.javadoc.Doclet;
-
 /**
  * {@link EntityMetaReader}の実装クラスです。
  * 
@@ -46,11 +45,11 @@ public class EntityMetaReaderImpl implements EntityMetaReader {
     protected static Logger logger = Logger
             .getLogger(EntityMetaReaderImpl.class);
 
-    /** {@link Doclet}が使用可能な場合{@code true} */
+    /** 旧{@code com.sun.tools.javadoc.Main}が使用可能な場合{@code true} */
     protected static boolean docletAvailable;
     static {
         try {
-            Class.forName("com.sun.javadoc.Doclet"); // tools.jar
+            Class.forName("com.sun.tools.javadoc.Main"); // tools.jar
             docletAvailable = true;
         } catch (final Throwable ignore) {
         }
@@ -226,7 +225,10 @@ public class EntityMetaReaderImpl implements EntityMetaReader {
      */
     protected void readComment(List<EntityMeta> entityMetaList) {
         if (!docletAvailable) {
-            throw new DocletUnavailableRuntimeException();
+            // JDK 9以降では旧式のdoclet APIが削除されているため、
+            // コメントの読み込みをスキップして処理を継続します。
+            logger.log("DS2JDBCGen0020", new Object[] { "com.sun.tools.javadoc.Main" });
+            return;
         }
         String[] args = createDocletArgs();
         StringBuilder buf = new StringBuilder();
@@ -237,16 +239,44 @@ public class EntityMetaReaderImpl implements EntityMetaReader {
 
         CommentDocletContext.setEntityMetaList(entityMetaList);
         try {
-            com.sun.tools.javadoc.Main.execute(args);
+            invokeJavadocTool(args);
         } finally {
             CommentDocletContext.setEntityMetaList(null);
         }
     }
 
     /**
-     * {@link Doclet}の引数の配列を作成します。
-     * 
-     * @return {@link Doclet}の引数の配列
+     * 旧式の{@code com.sun.tools.javadoc.Main}をリフレクション経由で起動します。
+     * <p>
+     * JDK 9以降では{@code com.sun.tools.javadoc}パッケージが削除されたため、
+     * ここではリフレクションによって起動可能な場合のみコメントを読み込み、
+     * 起動できない場合は何もせずに復帰します（コメントは空のまま）。
+     * これによりJDK 8以前のtools.jarがクラスパスにある環境では従来どおり動作し、
+     * JDK 9以降でも例外にならずに処理を継続できます。
+     *
+     * @param args
+     *            旧式Javadocツールへの引数
+     */
+    protected void invokeJavadocTool(String[] args) {
+        try {
+            Class.forName("com.sun.javadoc.RootDoc"); // check old doclet API
+        } catch (final Throwable ignore) {
+            return; // doclet API not available - no comments can be extracted
+        }
+        try {
+            Class mainClass = Class.forName("com.sun.tools.javadoc.Main");
+            Method execute = mainClass.getMethod("execute", new Class[] { String[].class });
+            execute.invoke(null, new Object[] { args });
+        } catch (Throwable ignore) {
+            // tools.jar not present on JDK 9+ or reflective call failed;
+            // degrade gracefully without comment
+        }
+    }
+
+    /**
+     * 旧式Javadocツールの引数の配列を作成します。
+     *
+     * @return 引数の配列
      */
     protected String[] createDocletArgs() {
         StringBuilder srcDirListBuf = new StringBuilder();

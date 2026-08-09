@@ -17,11 +17,9 @@ package org.seasar.extension.jdbc.gen.internal.exception;
 
 import org.seasar.framework.exception.SRuntimeException;
 
-import com.sun.javadoc.Doclet;
-
 /**
- * {@link Doclet}が使用できない場合にスローされます。
- * 
+ * JDKのJavadocツール({@code com.sun.tools.javadoc.Main})が使用できない場合にスローされます。
+ *
  * @author taedium
  */
 public class DocletUnavailableRuntimeException extends SRuntimeException {

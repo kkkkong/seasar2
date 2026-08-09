@@ -26,18 +26,12 @@ import org.seasar.extension.jdbc.PropertyMeta;
 import org.seasar.extension.jdbc.gen.internal.util.EntityMetaUtil;
 import org.seasar.extension.jdbc.gen.internal.util.PropertyMetaUtil;
 
-import com.sun.javadoc.AnnotationDesc;
-import com.sun.javadoc.ClassDoc;
-import com.sun.javadoc.Doclet;
-import com.sun.javadoc.FieldDoc;
-import com.sun.javadoc.RootDoc;
-
 /**
- * エンティティとプロパティのコメントを抽出する{@link Doclet}です。
+ * エンティティとプロパティのコメントを抽出するDocletです。
  * 
  * @author taedium
  */
-public class CommentDoclet extends Doclet {
+public class CommentDoclet {
 
     public static boolean start(RootDoc rootDoc) {
         List<EntityMeta> entityMetaList = CommentDocletContext
@@ -127,6 +121,110 @@ public class CommentDoclet extends Doclet {
             }
         }
         return false;
+    }
+
+    /**
+     * ドキュメンテーションコメントを抽出するために使用する
+     * {@code com.sun.javadoc} API の縮小ミラーです。
+     * <p>
+     * JDK 9で従来の {@code com.sun.javadoc} APIが削除されたため、 このDoclet自体の定義は
+     * {@code com.sun.tools.javadoc.Main}（JDK 8以前の tools.jar）が
+     * {@code start}メソッドを検出できないことを許容して、この縮小ミラーに対して行います。
+     * </p>
+     */
+
+    /**
+     * {@code com.sun.javadoc.RootDoc}のミラーです。
+     */
+    interface RootDoc extends Doc {
+
+        /**
+         * 指定された名前のクラスのドキュメントを返します。
+         * 
+         * @param name
+         *            完全修飾名
+         * @return クラスのドキュメント、見つからない場合は{@code null}
+         */
+        ClassDoc classNamed(String name);
+    }
+
+    /**
+     * {@code com.sun.javadoc.Doc} のミラーです。
+     */
+    interface Doc {
+
+        /**
+         * ドキュメンテーションコメントを返します。
+         * 
+         * @return ドキュメンテーションコメント
+         */
+        String commentText();
+
+        /**
+         * 名前を返します。
+         * 
+         * @return 名前
+         */
+        String name();
+
+        /**
+         * 修飾名を返します。
+         * 
+         * @return 修飾名
+         */
+        String qualifiedName();
+    }
+
+    /**
+     * {@code com.sun.javadoc.ClassDoc} のミラーです。
+     */
+    interface ClassDoc extends Doc {
+
+        /**
+         * フィールドのドキュメントの配列を返します。
+         * 
+         * @return フィールドのドキュメントの配列
+         */
+        FieldDoc[] fields();
+
+        /**
+         * スーパークラスのドキュメントを返します。
+         * 
+         * @return スーパークラスのドキュメント
+         */
+        ClassDoc superclass();
+
+        /**
+         * 注釈の配列を返します。
+         * 
+         * @return 注釈の配列
+         */
+        AnnotationDesc[] annotations();
+    }
+
+    /**
+     * {@code com.sun.javadoc.FieldDoc} のミラーです。
+     */
+    interface FieldDoc extends Doc {
+    }
+
+    /**
+     * {@code com.sun.javadoc.AnnotationDesc} のミラーです。
+     */
+    interface AnnotationDesc {
+
+        /**
+         * 注釈型のドキュメントを返します。
+         * 
+         * @return 注釈型のドキュメント
+         */
+        AnnotationTypeDoc annotationType();
+    }
+
+    /**
+     * {@code com.sun.javadoc.AnnotationTypeDoc} のミラーです。
+     */
+    interface AnnotationTypeDoc extends ClassDoc {
     }
 
 }

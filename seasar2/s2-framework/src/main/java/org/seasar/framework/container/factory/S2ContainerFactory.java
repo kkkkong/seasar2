@@ -134,8 +134,12 @@ public class S2ContainerFactory {
         if (StringUtil.isEmpty(path)) {
             throw new EmptyRuntimeException("path");
         }
-        if (!initialized) {
+        if (!initialized || provider == null) {
             configure();
+        }
+        if (provider == null) {
+            throw new IllegalStateException(
+                    "S2ContainerFactory is not initialized.");
         }
         return getProvider().create(path);
     }
@@ -158,8 +162,12 @@ public class S2ContainerFactory {
         if (StringUtil.isEmpty(path)) {
             throw new EmptyRuntimeException("path");
         }
-        if (!initialized) {
+        if (!initialized || provider == null) {
             configure();
+        }
+        if (provider == null) {
+            throw new IllegalStateException(
+                    "S2ContainerFactory is not initialized.");
         }
         return getProvider().create(path, classLoader);
     }
@@ -172,8 +180,12 @@ public class S2ContainerFactory {
      * @see S2ContainerFactory.Provider#create()
      */
     public static synchronized S2Container create() {
-        if (!initialized) {
+        if (!initialized || provider == null) {
             configure();
+        }
+        if (provider == null) {
+            throw new IllegalStateException(
+                    "S2ContainerFactory is not initialized.");
         }
         return getProvider().create();
     }
@@ -191,8 +203,12 @@ public class S2ContainerFactory {
      */
     public static S2Container include(final S2Container parent,
             final String path) {
-        if (!initialized) {
+        if (!initialized || provider == null) {
             configure();
+        }
+        if (provider == null) {
+            throw new IllegalStateException(
+                    "S2ContainerFactory is not initialized.");
         }
         return getProvider().include(parent, path);
     }
