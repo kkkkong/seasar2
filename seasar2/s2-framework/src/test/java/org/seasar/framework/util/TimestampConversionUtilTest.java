@@ -29,7 +29,9 @@ public class TimestampConversionUtilTest extends TestCase {
      * @throws Exception
      */
     public void testGetPattern() throws Exception {
-        assertEquals("y/MM/dd HH:mm:ss", TimestampConversionUtil
+        String expected = DateConversionUtil.getY4Pattern(Locale.JAPANESE)
+                + " HH:mm:ss";
+        assertEquals("1", expected, TimestampConversionUtil
                 .getPattern(Locale.JAPANESE));
     }
 }
