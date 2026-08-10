@@ -25,6 +25,7 @@ import org.seasar.framework.container.ContainerConstants;
 import org.seasar.framework.container.PropertyDef;
 import org.seasar.framework.container.S2Container;
 import org.seasar.framework.container.util.BindingUtil;
+import org.seasar.framework.exception.SIllegalArgumentException;
 import org.seasar.framework.util.FieldUtil;
 import org.seasar.framework.util.StringUtil;
 
@@ -344,10 +345,51 @@ public abstract class AbstractBindingTypeDef implements BindingTypeDef {
         }
         try {
             FieldUtil.set(field, component, value);
+        } catch (SIllegalArgumentException e) {
+            // HOT deployなどで、以前のクラスローダ世代の{@link Field}が
+            // キャッシュされ、新しい世代のインスタンスへの設定に失敗した場合に
+            // 備えて、実行時クラスから同名の{@link Field}を解決し直して再試行する。
+            Field resolvedField = getField(component.getClass(), field.getName());
+            if (resolvedField == null) {
+                throw e;
+            }
+            try {
+                FieldUtil.set(resolvedField, component, value);
+            } catch (SIllegalArgumentException e2) {
+                throw e;
+            }
         } catch (NumberFormatException ex) {
             throw new IllegalPropertyRuntimeException(componentDef
                     .getComponentClass(), field.getName(), ex);
         }
+    }
+
+    /**
+     * 指定されたクラスとそのスーパークラスから、指定された名前の{@link Field}を
+     * 探して返します。
+     * <p>
+     * S2AOPの<code>$$EnhancedByS2AOP$$</code>サブクラスの場合、フィールドは
+     * 実クラス（スーパークラス）に宣言されているため、スーパークラスをたどる
+     * ことで自然に解決できます。
+     *
+     * @param clazz
+     *            対象クラス
+     * @param name
+     *            フィールド名
+     * @return 見つかった{@link Field}。見つからない場合は<code>null</code>
+     */
+    protected Field getField(Class clazz, String name) {
+        for (Class c = clazz; c != null && c != Object.class; c = c
+                .getSuperclass()) {
+            try {
+                Field field = c.getDeclaredField(name);
+                field.setAccessible(true);
+                return field;
+            } catch (NoSuchFieldException e) {
+                // スーパークラスをたどって探し続ける
+            }
+        }
+        return null;
     }
 
     /**
