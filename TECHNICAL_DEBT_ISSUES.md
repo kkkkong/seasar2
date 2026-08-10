@@ -1,21 +1,23 @@
-# Technical Debt & Future Work — Seasar2
+# Technical Debt & Future Work — Seasar2 Modernized Fork
 
-This document tracks known technical debt and planned future improvements for the Seasar2 modernization effort. Each issue is presented in a GitHub-style format with background, proposed solution, benefits, challenges, and acceptance criteria.
+This document tracks known technical debt and planned future improvements. Each issue is presented in a GitHub-style format with background, proposed solution, benefits, challenges, and acceptance criteria.
 
 ---
 
-## Issue 1: Replace `ClassLoader.defineClass()` Reflection with `MethodHandles.Lookup.defineClass()`
+## Issue 1: Refactor `ClassLoader.defineClass()` Reflection with `MethodHandles.Lookup.defineClass()`
 
-**Priority:** Medium  
-**Labels:** `refactoring`, `java9+`, `jvm-compatibility`  
-**Affected Areas:** `s2-framework` (DI container, AOP proxy generation, HotdeployBehavior)
+**Labels:** `enhancement` `java9+` `technical-debt` `security`
+
+### Summary
+
+Replace reflective access to `ClassLoader.defineClass()` with the supported [`java.lang.invoke.MethodHandles.Lookup.defineClass()`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/invoke/MethodHandles.Lookup.html#defineClass(byte%5B%5D)) API available since Java 9. This would eliminate the most security-sensitive `--add-opens` flag (`java.base/java.lang=ALL-UNNAMED`).
 
 ### Background
 
-Seasar2 currently uses reflection to access `ClassLoader.defineClass()` for dynamic proxy class generation. The core DI container and AOP framework generate bytecode at runtime (via [Javassist](https://www.javassist.org/)) and must define new classes in the JVM. The legacy approach calls the `protected` method `ClassLoader.defineClass()` through `setAccessible(true)`:
+Seasar2's DI container, AOP proxy generation, and HotdeployBehavior dynamically generate classes at runtime using Javassist. To define these classes in the JVM, the framework reflectively calls the `protected` method `ClassLoader.defineClass()`:
 
 ```java
-// Current approach (simplified)
+// Current approach (requires --add-opens java.base/java.lang=ALL-UNNAMED)
 Method defineClass = ClassLoader.class.getDeclaredMethod(
     "defineClass", String.class, byte[].class, int.class, int.class
 );
@@ -25,67 +27,69 @@ Class<?> proxyClass = (Class<?>) defineClass.invoke(
 );
 ```
 
-JDK 9+ encapsulates this method behind module boundaries, requiring `--add-opens java.base/java.lang=ALL-UNNAMED` at JVM startup. This workaround functions correctly on JDK 9 through JDK 21, but it is fragile — future JDK versions may remove the method entirely or further tighten module encapsulation.
+JDK 9+ encapsulates `ClassLoader.defineClass()` behind module boundaries, which is why the `--add-opens java.base/java.lang=ALL-UNNAMED` flag is currently required.
 
-**Key files involved:**
+### Affected Files
 
 | File | Role |
 |---|---|
-| `s2-framework/.../container/factory/S2ContainerFactory.java` | DI container initialization, uses reflection for class loading |
-| `s2-framework/.../aop/` (various) | AOP proxy bytecode generation |
-| `s2-framework/.../hotdeploy/` (various) | HotdeployBehavior dynamic class reloading |
-| `s2-framework/.../util/ClassUtil.java` | Utility methods wrapping `ClassLoader.defineClass()` |
+| [`S2ContainerFactory.java`](seasar2/s2-framework/src/main/java/org/seasar/framework/container/factory/S2ContainerFactory.java) | DI container initialization and class loading |
+| AOP proxy classes (various under `s2-framework/.../aop/`) | Bytecode generation for method interceptors |
+| HotdeployBehavior classes (various under `s2-framework/.../hotdeploy/`) | Dynamic class reloading |
+| [`ClassUtil.java`](seasar2/s2-framework/src/main/java/org/seasar/framework/util/ClassUtil.java) (or equivalent utility) | `ClassLoader.defineClass()` wrapper utilities |
 
 ### Proposed Solution
 
-Replace reflective `ClassLoader.defineClass()` calls with [`java.lang.invoke.MethodHandles.Lookup.defineClass()`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/invoke/MethodHandles.Lookup.html#defineClass(byte%5B%5D)), available since Java 9:
+Replace with the supported `java.lang.invoke.MethodHandles.Lookup.defineClass()`:
 
 ```java
-// Proposed approach
+// Proposed approach (no --add-opens needed for java.lang)
 MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(
     TargetClass.class, MethodHandles.lookup()
 );
-byte[] classBytes = javassistProxy.toBytecode(); // generated proxy bytecode
+byte[] classBytes = javassistProxy.toBytecode();
 Class<?> proxyClass = lookup.defineClass(classBytes);
+```
+
+A fallback path must be preserved for JDK 8 where `Lookup.defineClass()` does not exist:
+
+```java
+try {
+    // JDK 9+: Use supported Lookup.defineClass() API
+    MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(targetClass, MethodHandles.lookup());
+    return lookup.defineClass(classBytes);
+} catch (NoSuchMethodError | IllegalAccessException e) {
+    // JDK 8 fallback: reflection-based ClassLoader.defineClass()
+    return defineClassViaReflection(classLoader, className, classBytes);
+}
 ```
 
 ### Benefits
 
-- **Eliminates `--add-opens java.base/java.lang=ALL-UNNAMED`**: Reduces the required JVM flags from 4 to 3, and removes the most security-sensitive one (access to `java.lang` internals).
-- **Uses a supported, standard API**: `Lookup.defineClass()` is a public, documented method that is less likely to be removed or restricted in future JDK releases.
-- **Future-proof for JDK 21+**: As the JDK continues to encapsulate internal APIs, the reflection-based approach becomes riskier with each release.
-- **Improved security posture**: Reducing `--add-opens` surface area aligns with the principle of least privilege.
+- **Eliminates `--add-opens java.base/java.lang=ALL-UNNAMED`**: Removes the most security-sensitive JVM flag (access to `java.lang` internals)
+- **Uses a supported, standard API**: `Lookup.defineClass()` is public and documented — far less likely to be removed or restricted in future JDK releases
+- **Future-proof for JDK 21+**: As the JDK continues encapsulating internal APIs, the reflection-based approach becomes riskier with each release
+- **Improved security posture**: Reduces `--add-opens` surface from 4 flags to 3, aligning with the principle of least privilege
 
 ### Challenges
 
-1. **`Lookup` access requirements**: `MethodHandles.Lookup.defineClass()` requires a `Lookup` with `PRIVATE` access on a target class in the **same package** as the generated proxy. This may require restructuring how proxy classes are generated and which package they live in. [`MethodHandles.privateLookupIn()`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/invoke/MethodHandles.html#privateLookupIn(java.lang.Class,java.lang.invoke.MethodHandles.Lookup)) can be used to obtain the necessary access, but the target class must be carefully chosen.
+1. **`Lookup` access requirements**: `MethodHandles.Lookup.defineClass()` requires a `Lookup` with `PRIVATE` access on a target class in the **same package** as the generated proxy. May require restructuring proxy package placement.
 
-2. **Javassist compatibility**: The existing codebase uses Javassist for bytecode manipulation. Need to verify that Javassist can output raw `byte[]` compatible with `Lookup.defineClass()`. Javassist's `CtClass.toBytecode()` returns `byte[]`, which should be directly compatible, but the class must not have already been loaded by a different `ClassLoader`.
+2. **Javassist compatibility**: Javassist's `CtClass.toBytecode()` returns `byte[]` — this should be directly compatible, but the class must not have been previously loaded by a different `ClassLoader`.
 
-3. **Backward compatibility with JDK 8**: `MethodHandles.Lookup.defineClass()` does not exist in JDK 8. The old reflection path must be preserved for JDK 8 environments. Use a `try-catch` fallback pattern:
+3. **JDK 8 backward compatibility**: Must preserve the reflection-based fallback path for JDK 8 (`Lookup.defineClass()` does not exist in JDK 8).
 
-    ```java
-    try {
-        // Try JDK 9+ Lookup.defineClass() first
-        MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(targetClass, MethodHandles.lookup());
-        return lookup.defineClass(classBytes);
-    } catch (NoSuchMethodError | IllegalAccessException e) {
-        // Fallback to reflection-based ClassLoader.defineClass() on JDK 8
-        return defineClassViaReflection(classLoader, className, classBytes);
-    }
-    ```
+4. **Package-private access**: Generated proxy classes need access to internal Seasar2 packages. The `Lookup`-based approach must ensure correct package-level visibility.
 
-4. **Package-private access**: Generated proxy classes need access to internal Seasar2 packages. The `Lookup` approach may require careful placement of the anchor class to ensure the generated class has the right package-level access.
-
-5. **HotdeployBehavior complexity**: The hot-deploy mechanism reloads classes dynamically, which may interact differently with `Lookup.defineClass()` compared to the reflection path. Thorough testing under HotdeployBehavior is essential.
+5. **HotdeployBehavior complexity**: The hot-deploy mechanism's dynamic class reloading may interact differently with `Lookup.defineClass()`. Requires thorough testing under HotdeployBehavior.
 
 ### Acceptance Criteria
 
 - [ ] All existing proxy-generation tests pass **without** `--add-opens java.base/java.lang=ALL-UNNAMED` on JDK 11+
-- [ ] Old reflection path preserved and tested on JDK 8 — no regressions
-- [ ] No performance regression in proxy class creation (benchmark comparison)
+- [ ] Reflection-based fallback preserved and tested on JDK 8 — no regressions
+- [ ] No performance regression in proxy class creation
 - [ ] HotdeployBehavior class reloading works correctly with the new approach
-- [ ] AOP proxy generation works correctly (both interface-based and class-based proxies)
+- [ ] AOP proxy generation works for both interface-based and class-based proxies
 - [ ] [`MIGRATION_GUIDE.md`](MIGRATION_GUIDE.md) updated to remove the `java.lang` add-opens requirement
 - [ ] [`CHANGELOG.md`](CHANGELOG.md) updated with the change
 
@@ -93,26 +97,28 @@ Class<?> proxyClass = lookup.defineClass(classBytes);
 
 | Task | Estimate |
 |---|---|
-| Research & prototype `Lookup.defineClass()` integration | 2-3 days |
-| Implement core change with fallback | 2-3 days |
-| Adapt HotdeployBehavior | 1-2 days |
-| Full regression testing (JDK 8, 11, 17) | 2-3 days |
+| Research & prototype `Lookup.defineClass()` integration | 2–3 days |
+| Implement core change with JDK 8 fallback | 2–3 days |
+| Adapt HotdeployBehavior | 1–2 days |
+| Full regression testing (JDK 8, 11, 17) | 2–3 days |
 | Documentation updates | 0.5 day |
-| **Total** | **~8-12 days** |
+| **Total** | **~8–12 days** |
 
 ---
 
-## Issue 2: Migrate from `javax.*` to `jakarta.*` Namespace
+## Issue 2: Migrate `javax.*` to `jakarta.*` Namespace for Servlet Container Compatibility
 
-**Priority:** High  
-**Labels:** `jakarta`, `servlet`, `breaking-change`, `tomcat10+`  
-**Affected Areas:** `s2-extension` (Servlet filter, request dump), `s2-tiger` (web test utilities), `s2-framework` (any `javax.*` references)
+**Labels:** `enhancement` `jakarta` `servlet` `breaking-change` `java11+`
+
+### Summary
+
+Replace all `javax.servlet.*`, `javax.transaction.*`, `javax.annotation.*`, and `javax.persistence.*` imports with their `jakarta.*` equivalents. This is a **breaking change** required for compatibility with modern Servlet containers (Tomcat 10+, Jetty 11+, WildFly 27+).
 
 ### Background
 
-Seasar2 currently uses `javax.servlet.*`, `javax.transaction.*`, and other `javax.*` packages from Java EE / Jakarta EE 8 and earlier. With the release of Jakarta EE 9 (2020), all APIs moved from the `javax.*` namespace to the `jakarta.*` namespace. This was a deliberate, breaking change by the Eclipse Foundation to signal the transition from Oracle-led Java EE to community-led Jakarta EE.
+Seasar2 currently uses `javax.servlet.*` and other `javax.*` packages from Java EE 8 and earlier. With Jakarta EE 9 (2020), all APIs moved from `javax.*` to `jakarta.*` — a deliberate breaking change by the Eclipse Foundation.
 
-Modern Servlet containers have dropped `javax.*` support:
+**Affected container compatibility:**
 
 | Container | `javax.*` Support | `jakarta.*` Support |
 |---|---|---|
@@ -120,7 +126,6 @@ Modern Servlet containers have dropped `javax.*` support:
 | Tomcat 10+ | ❌ No | ✅ Yes |
 | Jetty 10 | ✅ Yes | ❌ No |
 | Jetty 11+ | ❌ No | ✅ Yes |
-| Jetty 12+ | ❌ No | ✅ Yes |
 | WildFly 26 and earlier | ✅ Yes | ❌ No |
 | WildFly 27+ | ❌ No | ✅ Yes |
 | GlassFish 6 and earlier | ✅ Yes | ❌ No |
@@ -128,13 +133,22 @@ Modern Servlet containers have dropped `javax.*` support:
 | Payara 6+ | ❌ No | ✅ Yes |
 | Open Liberty 23+ | ❌ No | ✅ Yes |
 
-**Impact**: Applications built on Seasar2 **cannot deploy** to Tomcat 10+, Jetty 11+, WildFly 27+, or any modern Jakarta EE 9+ container. As older containers reach end-of-life, this becomes a critical blocker.
+**Impact**: Applications on Seasar2 **cannot deploy** to Tomcat 10+, Jetty 11+, or any modern Jakarta EE 9+ container. As older containers reach end-of-life, this becomes a critical blocker.
+
+### Affected Modules
+
+| Module | `javax.*` Dependency | Replacement |
+|---|---|---|
+| `s2-extension` | `javax.servlet.*` (filters, request dump) | `jakarta.servlet.*` |
+| `s2-extension` | `javax.transaction.*` (JTA) | `jakarta.transaction.*` |
+| `s2-tiger` | `javax.servlet.*` (web test utilities) | `jakarta.servlet.*` |
+| `s2-tiger` | `javax.persistence.*` (JPA) | `jakarta.persistence.*` |
+| `s2-tiger` | `javax.annotation.*` | `jakarta.annotation.*` |
+| All modules | `javax.ejb.*` | `jakarta.ejb.*` |
 
 ### Proposed Solution
 
-#### Phase 1: Identify All `javax.*` References
-
-Run a comprehensive audit across the entire codebase:
+#### Phase 1: Audit
 
 ```bash
 # Find all javax.* imports in Java source
@@ -147,28 +161,16 @@ grep -r "javax\." --include="*.dicon" .
 grep -r "javax\." --include="pom.xml" .
 ```
 
-Expected categories of affected code:
-
-| Current Import | Target Import |
-|---|---|
-| `javax.servlet.*` | `jakarta.servlet.*` |
-| `javax.servlet.http.*` | `jakarta.servlet.http.*` |
-| `javax.servlet.annotation.*` | `jakarta.servlet.annotation.*` |
-| `javax.transaction.*` | `jakarta.transaction.*` |
-| `javax.annotation.*` | `jakarta.annotation.*` |
-| `javax.ejb.*` (if used) | `jakarta.ejb.*` |
-| `javax.persistence.*` (s2-tiger) | `jakarta.persistence.*` |
-
 #### Phase 2: Update Maven Dependencies
 
-| Current Dependency (GroupId : ArtifactId) | Jakarta Replacement | Notes |
-|---|---|---|
-| `org.apache.geronimo.specs:geronimo-j2ee_1.4_spec` | `jakarta.platform:jakarta.jakartaee-api:9.1.0` | Umbrella API JAR; may bring in more than needed |
-| `org.apache.geronimo.specs:geronimo-servlet_2.4_spec` | `jakarta.servlet:jakarta.servlet-api:5.0.0` | Servlet 5.0 = Jakarta EE 9 |
-| `org.apache.geronimo.specs:geronimo-ejb_2.1_spec` | `jakarta.ejb:jakarta.ejb-api:4.0.0` | EJB 4.0 = Jakarta EE 9 |
-| `org.apache.geronimo.specs:geronimo-jta_1.1_spec` | `jakarta.transaction:jakarta.transaction-api:2.0.1` | JTA 2.0 = Jakarta EE 9 |
-| `org.apache.geronimo.specs:geronimo-annotation_1.0_spec` | `jakarta.annotation:jakarta.annotation-api:2.1.1` | Common Annotations 2.1 = Jakarta EE 9 |
-| `org.apache.geronimo.specs:geronimo-jpa_3.0_spec` | `jakarta.persistence:jakarta.persistence-api:3.1.0` | JPA 3.1 = Jakarta EE 10 |
+| Current Dependency | Jakarta Replacement |
+|---|---|
+| `org.apache.geronimo.specs:geronimo-j2ee_1.4_spec` | `jakarta.platform:jakarta.jakartaee-api:9.1.0` |
+| `org.apache.geronimo.specs:geronimo-servlet_2.4_spec` | `jakarta.servlet:jakarta.servlet-api:5.0.0` |
+| `org.apache.geronimo.specs:geronimo-ejb_2.1_spec` | `jakarta.ejb:jakarta.ejb-api:4.0.0` |
+| `org.apache.geronimo.specs:geronimo-jta_1.1_spec` | `jakarta.transaction:jakarta.transaction-api:2.0.1` |
+| `org.apache.geronimo.specs:geronimo-annotation_1.0_spec` | `jakarta.annotation:jakarta.annotation-api:2.1.1` |
+| `org.apache.geronimo.specs:geronimo-jpa_3.0_spec` | `jakarta.persistence:jakarta.persistence-api:3.1.0` |
 
 #### Phase 3: Create Jakarta Migration Branch
 
@@ -183,12 +185,11 @@ This branch should:
 - Update `.dicon` files referencing `javax.*` classes
 - Run full regression test suite
 
-#### Phase 4: Provide Migration Tooling
+#### Phase 4: Migration Tooling for Downstream Consumers
 
-Create a migration script or document step-by-step instructions for downstream consumers:
+Provide an automated migration script:
 
 ```bash
-# Example: Automated import migration using a script
 find . -name "*.java" -exec sed -i \
   -e 's/import javax\.servlet\./import jakarta.servlet./g' \
   -e 's/import javax\.transaction\./import jakarta.transaction./g' \
@@ -198,69 +199,60 @@ find . -name "*.java" -exec sed -i \
   {} +
 ```
 
-> **Note**: The above `sed` command is a starting point only. Manual review is necessary — some `javax.*` packages (like `javax.sql.*`, `javax.naming.*`, `javax.xml.*`) remain in the JDK and should NOT be migrated.
+> **Note:** `javax.sql.*`, `javax.naming.*`, and `javax.xml.*` remain in the JDK and must **NOT** be migrated.
 
 ### Challenges
 
-1. **Breaking change**: This is a hard breaking change. All existing code that extends Seasar2 web classes (e.g., custom servlets, filters, listeners) must also migrate their imports. There is no binary compatibility path.
+1. **Breaking change**: Hard break — all downstream code extending Seasar2 web classes must also migrate. No binary compatibility path.
+2. **Major version bump**: Warrants **Seasar2 3.0.0** for the Jakarta branch; javax branch stays at 2.x.
+3. **JDK 8 incompatibility**: Jakarta EE 9+ requires JDK 11+. Jakarta branch must drop JDK 8 support.
+4. **Dual maintenance burden**: Bug fixes may need backporting between `branch-javax` (2.x) and `branch-jakarta` (3.x).
+5. **Downstream ecosystem impact**: All dependent projects must migrate their own `javax.*` imports and upgrade their Servlet container.
 
-2. **Major version bump required**: This warrants a new major version — e.g., **Seasar2 3.0.0** for the Jakarta branch, while the javax branch remains at 2.x. Clear versioning communication is critical.
+### Interim Workaround for Downstream Consumers
 
-3. **JDK 8 incompatibility**: Jakarta EE 9+ requires JDK 11+. The Jakarta branch must drop JDK 8 support. This must be clearly documented.
-
-4. **Downstream ecosystem impact**: Projects that depend on Seasar2 will need to:
-   - Migrate their own `javax.*` imports
-   - Update their Servlet container (or keep running on Tomcat 9 / Jetty 10)
-   - Potentially re-test their entire application
-
-5. **Dual maintenance burden**: During the transition period, bug fixes may need to be backported between `branch-javax` (2.x) and `branch-jakarta` (3.x).
-
-6. **Testing infrastructure**: CI must be updated to test against both Tomcat 9 (for javax builds) and Tomcat 10 (for jakarta builds), OR the javax branch can be placed in maintenance mode with only critical fixes.
+The [Apache Tomcat Migration Tool for Jakarta EE](https://github.com/apache/tomcat-jakartaee-migration) can automatically transform `javax.*` to `jakarta.*` at the bytecode level in existing WAR/EAR files. This works without source changes but is a stopgap — Seasar2 should eventually move to `jakarta.*` natively.
 
 ### Acceptance Criteria
 
-- [ ] Zero `javax.servlet.*`, `javax.transaction.*`, `javax.annotation.*`, `javax.ejb.*`, `javax.persistence.*` imports remaining in source code
+- [ ] Zero `javax.servlet.*`, `javax.transaction.*`, `javax.annotation.*`, `javax.ejb.*`, `javax.persistence.*` imports remaining
 - [ ] All Maven POM files updated with Jakarta EE 9+ dependencies
 - [ ] All `.dicon` files reviewed and updated for `jakarta.*` references
-- [ ] Full regression test suite passes on Tomcat 10 (or embedded Jetty 11 for CI) with JDK 11+
-- [ ] Migration script or tool provided for downstream consumers
-- [ ] New Maven coordinates or classifier to distinguish `javax` (2.x) vs `jakarta` (3.x) builds
+- [ ] Full regression test suite passes on Tomcat 10+ with JDK 11+
+- [ ] Migration script/documentation provided for downstream consumers
+- [ ] New Maven coordinates or classifier to distinguish javax (2.x) vs jakarta (3.x) builds
 - [ ] [`MIGRATION_GUIDE.md`](MIGRATION_GUIDE.md) updated with `javax → jakarta` migration steps
-- [ ] [`CHANGELOG.md`](CHANGELOG.md) updated with the breaking change notice
-- [ ] [`README.md`](README.md) updated to document JDK version requirements per branch
-- [ ] `CONTRIBUTING.md` updated with branch strategy for javax vs jakarta
+- [ ] [`CHANGELOG.md`](CHANGELOG.md) updated with breaking change notice
+- [ ] [`README.md`](README.md) updated with JDK version requirements per branch
+- [ ] `CONTRIBUTING.md` updated with branch strategy
 
 ### Estimated Effort
 
 | Task | Estimate |
 |---|---|
 | Audit all `javax.*` references | 1 day |
-| Implement import migration (automated + manual review) | 3-5 days |
+| Implement import migration (automated + manual review) | 3–5 days |
 | Update Maven dependencies | 1 day |
 | Update `.dicon` files | 0.5 day |
-| Full regression testing (JDK 11, 17) on Tomcat 10+ | 3-5 days |
-| Migration tooling for downstream | 2-3 days |
-| Documentation updates | 1-2 days |
-| **Total** | **~12-18 days** |
-
-### Alternative: Tomcat Migration Tool for Jakarta
-
-As an interim solution for downstream consumers, the [Apache Tomcat Migration Tool for Jakarta EE](https://github.com/apache/tomcat-jakartaee-migration) can automatically transform `javax.*` to `jakarta.*` at the bytecode level in existing WAR/EAR files. This tool works without source code changes, but it is a stopgap — Seasar2 itself should eventually move to the `jakarta.*` namespace natively.
+| Full regression testing (JDK 11, 17) on Tomcat 10+ | 3–5 days |
+| Migration tooling for downstream | 2–3 days |
+| Documentation updates | 1–2 days |
+| **Total** | **~12–18 days** |
 
 ---
 
-## Additional Notes
+## Priority & Timeline
 
-### When to Address Each Issue
-
-| Issue | Urgency | Recommended Timeline |
+| Issue | Priority | Recommended Timeline |
 |---|---|---|
-| Issue 1: `Lookup.defineClass()` | Medium | Within 6-12 months, before JDK 21 becomes the dominant LTS |
-| Issue 2: `javax → jakarta` | High | Within 6 months, as Tomcat 9 end-of-life approaches |
+| Issue 2: `javax → jakarta` | **High** | Within 6 months — Tomcat 9 end-of-life approaching |
+| Issue 1: `Lookup.defineClass()` | Medium | Within 6–12 months — before JDK 21 becomes dominant LTS |
 
-### Related Documentation
+---
 
-- [Changelog — Seasar2 Modernization Release](CHANGELOG.md)
-- [Migration Guide — Seasar2 Modernization](MIGRATION_GUIDE.md)
-- [Seasar2 Development Guide](DEVELOPMENT.md)
+## Related Documents
+
+- [Changelog — Seasar2 Modernized Fork](CHANGELOG.md)
+- [Migration Guide — Seasar2 Modernized Fork](MIGRATION_GUIDE.md)
+- [Development Guide](DEVELOPMENT.md)
 - [Contributing Guidelines](CONTRIBUTING.md)
