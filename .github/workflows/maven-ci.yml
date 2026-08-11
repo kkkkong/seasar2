@@ -1,60 +1,32 @@
 name: Maven CI
+
 on:
   push:
-    branches: [ master, ci-and-contrib ]
+    branches:
+      - master
   pull_request:
-    branches: [ master ]
+    branches:
+      - master
 
 jobs:
   build:
+    name: Build with JDK ${{ matrix.java }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        java: [8]
+        java: ['8', '11', '17', '21']
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK
+      - name: Set up JDK ${{ matrix.java }}
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: 'temurin'
           java-version: ${{ matrix.java }}
+          cache: 'maven'
 
-      - name: Cache Maven packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-
-      - name: Create Maven settings.xml
-        run: |
-          mkdir -p ~/.m2
-          cat << 'EOF' > ~/.m2/settings.xml
-          <settings>
-            <mirrors>
-              <mirror>
-                <id>seasar-https-mirror</id>
-                <mirrorOf>maven.seasar.org</mirrorOf>
-                <name>Seasar HTTPS Mirror</name>
-                <url>https://maven.seasar.org/maven2</url>
-              </mirror>
-            </mirrors>
-          </settings>
-          EOF
-
-      # เพิ่ม -Dmaven.compiler.source=1.5 -Dmaven.compiler.target=1.5 เพื่อรองรับ Class JDBC แบบเก่า
-      - name: Build Core Framework (seasar2)
-        working-directory: ./seasar2
-        run: mvn -B -V -e install -DskipTests -s ~/.m2/settings.xml -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8
-
-      - name: Build s2-tiger
-        working-directory: ./s2-tiger
-        run: mvn -B -V -e install -DskipTests -s ~/.m2/settings.xml -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8
-
-      - name: Build s2jdbc-gen
-        working-directory: ./s2jdbc-gen
-        run: mvn -B -V -e install -DskipTests -s ~/.m2/settings.xml -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8
+      - name: Build and test with Maven
+        run: mvn clean install -B
