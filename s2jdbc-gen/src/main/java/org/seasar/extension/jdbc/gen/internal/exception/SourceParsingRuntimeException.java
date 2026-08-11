@@ -15,22 +15,42 @@
  */
 package org.seasar.extension.jdbc.gen.internal.exception;
 
+import java.io.File;
+
 import org.seasar.framework.exception.SRuntimeException;
 
 /**
- * JDKのJavadocツール({@code com.sun.tools.javadoc.Main})が使用できない場合にスローされます。
+ * Javaソースファイルの解析に失敗した場合にスローされます。
  *
  * @author taedium
  */
-public class DocletUnavailableRuntimeException extends SRuntimeException {
+public class SourceParsingRuntimeException extends SRuntimeException {
 
     private static final long serialVersionUID = 1L;
 
+    /** 解析に失敗したソースファイル */
+    protected File sourceFile;
+
     /**
      * インスタンスを構築します。
+     * 
+     * @param sourceFile
+     *            解析に失敗したソースファイル
+     * @param cause
+     *            原因となった例外
      */
-    public DocletUnavailableRuntimeException() {
-        super("ES2JDBCGen0030", new Object[] {});
+    public SourceParsingRuntimeException(File sourceFile, Throwable cause) {
+        super("ES2JDBCGen0030", new Object[] { sourceFile.getPath() }, cause);
+        this.sourceFile = sourceFile;
+    }
+
+    /**
+     * 解析に失敗したソースファイルを返します。
+     * 
+     * @return 解析に失敗したソースファイル
+     */
+    public File getSourceFile() {
+        return sourceFile;
     }
 
 }
