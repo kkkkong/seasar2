@@ -1,24 +1,26 @@
-# Migration Guide — Seasar2 Modernized Fork (JDK 8 → 17)
+# Migration Guide — Seasar2 Modernized Fork (JDK 8 → 21)
 
-This guide covers the required steps when migrating your Seasar2-based application from the legacy version to the modernized release, which adds support for JDK 8, 11, and 17 alongside critical security hardening.
+This guide covers the required steps when migrating your Seasar2-based application from the legacy version to the modernized release, which adds support for JDK 8, 11, 17, and 21 alongside critical security hardening and the `s2jdbc-gen` JavaParser refactor.
 
 ---
 
 ## Table of Contents
 
-1. [JVM Arguments (Java 17+)](#1-jvm-arguments-java-17)
+1. [JVM Arguments (Java 9+)](#1-jvm-arguments-java-9)
 2. [OGNL Security Sandbox](#2-ognl-security-sandbox)
-3. [Java 8 CLDR Note](#3-java-8-cldr-note)
-4. [Build Instructions](#4-build-instructions)
-5. [Verification Checklist](#5-verification-checklist)
+3. [s2jdbc-gen: Doclet API → JavaParser Migration](#3-s2jdbc-gen-doclet-api--javaparser-migration)
+4. [Java 8 CLDR Note](#4-java-8-cldr-note)
+5. [Build Instructions](#5-build-instructions)
+6. [Upgrading from Original Seasar 2.4.x](#6-upgrading-from-original-seasar-24x)
+7. [Verification Checklist](#7-verification-checklist)
 
 ---
 
-## 1. JVM Arguments (Java 17+)
+## 1. JVM Arguments (Java 9+)
 
 ### 1.1 Required `--add-opens` Flags
 
-On **Java 9 and later** (JDK 11, JDK 17, JDK 21+), you **MUST** add the following `--add-opens` JVM arguments:
+On **Java 9 and later** (JDK 11, JDK 17, JDK 21), you **MUST** add the following `--add-opens` JVM arguments. These enable Seasar2's reflection-based DI container, AOP dynamic proxy generation (via javassist), OGNL expression evaluation, and HotdeployBehavior to operate under the Java Platform Module System (JPMS):
 
 ```
 --add-opens java.base/java.lang=ALL-UNNAMED
@@ -182,19 +184,48 @@ public class Service {
 
 ---
 
-## 3. Java 8 CLDR Note
+## 3. s2jdbc-gen: Doclet API → JavaParser Migration
 
-### 3.1 Background
+### 3.1 What Changed
+
+The legacy `com.sun.javadoc` Doclet API — used by `s2jdbc-gen` to extract Javadoc comments from entity source files for column/table metadata — was **removed from the JDK starting with Java 9**. The modernized fork replaces it entirely with [`com.github.javaparser:javaparser-core:3.25.10`](s2jdbc-gen/pom.xml:124), a pure-Java AST parsing library.
+
+| Aspect | Before (Legacy) | After (Modernized) |
+|---|---|---|
+| **Parser** | `com.sun.javadoc` Doclet API | `com.github.javaparser:javaparser-core:3.25.10` |
+| **JDK Dependency** | Requires `tools.jar` (JDK ≤8) or fails on JDK 9+ | No JDK-internal dependencies — compiles on all JDKs |
+| **CommentDoclet** | Direct `com.sun.javadoc.*` references | Removed; replaced by [`JavadocASTReader`](s2jdbc-gen/src/main/java/org/seasar/extension/jdbc/gen/internal/meta/JavadocASTReader.java:44) |
+| **Javadoc Extraction** | Silent skip on JDK 9+ | Fully functional on all JDK versions via JavaParser AST |
+| **`@MappedSuperclass` Support** | N/A | Traverses superclass hierarchy for inherited Javadoc |
+
+### 3.2 Key Classes
+
+| Class | Purpose |
+|---|---|
+| [`JavadocASTReader`](s2jdbc-gen/src/main/java/org/seasar/extension/jdbc/gen/internal/meta/JavadocASTReader.java:44) | Parses `.java` source files using JavaParser AST; extracts class-level and field-level Javadoc comments |
+| [`EntityMetaReaderImpl`](s2jdbc-gen/src/main/java/org/seasar/extension/jdbc/gen/internal/meta/EntityMetaReaderImpl.java:78) | Integrates `JavadocASTReader` for entity metadata generation; replaced previous `CommentDoclet`-based approach |
+
+### 3.3 Impact on Existing Projects
+
+- **No `tools.jar` dependency**: `s2jdbc-gen` compiles and runs on JDK 11, 17, and 21 without requiring a full JDK installation (works with JRE).
+- **Full Javadoc extraction**: Unlike the intermediate "graceful degradation" approach (which silently skipped Javadoc on JDK 9+), the JavaParser backend extracts comment metadata on **all** JDK versions, including `@MappedSuperclass` hierarchy traversal.
+- **No configuration changes needed**: The Ant/Maven task configuration for `s2jdbc-gen` remains identical.
+
+---
+
+## 4. Java 8 CLDR Note
+
+### 4.1 Background
 
 Starting with JDK 9, the JVM switched its default locale provider from `JRE` to `CLDR` (Unicode Common Locale Data Repository). This affects how `java.text.DateFormat` resolves date format patterns.
 
-### 3.2 Impact on Tests
+### 4.2 Impact on Tests
 
 - **5 date-format tests** in [`DateConversionUtilTest`](seasar2/s2-framework/src/test/java/org/seasar/framework/util/DateConversionUtilTest.java) and [`TimestampConversionUtilTest`](seasar2/s2-framework/src/test/java/org/seasar/framework/util/TimestampConversionUtilTest.java) may **fail on native JDK 8** but **pass on JDK 11+**.
 - **This is NOT a functional regression.** Production date-formatting behavior is correct on all supported JDK versions. The JRE locale provider on JDK 8 uses slightly different pattern strings than the CLDR provider on JDK 11+, but both produce correct dates.
 - **Recommendation**: Run your test suite on JDK 11+ for accurate results. JDK 8 failures in these specific tests are expected and can be ignored if your production target is JDK 11+.
 
-### 3.3 Workaround for JDK 8 Test Execution
+### 4.3 Workaround for JDK 8 Test Execution
 
 If you need test parity on JDK 8, force the CLDR locale provider:
 
@@ -204,7 +235,7 @@ If you need test parity on JDK 8, force the CLDR locale provider:
 
 This makes JDK 8 use the same CLDR locale data as JDK 11+, eliminating the test differences.
 
-### 3.4 Forcing JRE Locale Provider on JDK 9+
+### 4.4 Forcing JRE Locale Provider on JDK 9+
 
 Conversely, to maintain JDK 8-compatible date behavior on JDK 9+, force the legacy JRE provider:
 
@@ -214,9 +245,9 @@ Conversely, to maintain JDK 8-compatible date behavior on JDK 9+, force the lega
 
 ---
 
-## 4. Build Instructions
+## 5. Build Instructions
 
-### 4.1 Build Order
+### 5.1 Build Order
 
 The module hierarchy requires building in this order due to inter-module dependencies:
 
@@ -226,7 +257,7 @@ The module hierarchy requires building in this order due to inter-module depende
 3. s2jdbc-gen/        (depends on s2-framework + s2-extension + s2-tiger)
 ```
 
-### 4.2 Maven Build Commands
+### 5.2 Maven Build Commands
 
 ```bash
 # Step 1: Build core framework (s2-framework + s2-extension)
@@ -244,7 +275,7 @@ mvn clean install
 
 > **Important:** `mvn clean install` must be run from each **module directory**, NOT the repository root. The root [`pom.xml`](pom.xml) is an aggregator-only POM (`<packaging>pom</packaging>`) and does not contain buildable source.
 
-### 4.3 Useful Build Flags
+### 5.3 Useful Build Flags
 
 | Command | Purpose |
 |---|---|
@@ -253,7 +284,7 @@ mvn clean install
 | `mvn clean install -DskipTests` | Build without running tests |
 | `mvn javadoc:javadoc` | Generate Javadoc |
 
-### 4.4 Database Profiles
+### 5.4 Database Profiles
 
 For tests requiring a database connection:
 
@@ -268,22 +299,88 @@ mvn test -Ph2          # H2 (embedded)
 
 Default profile is HSQLDB (embedded, no external database required).
 
-### 4.5 JDK Version Compatibility Matrix
+### 5.5 JDK Version Compatibility Matrix
 
-| JDK Version | Build | Runtime | Notes |
-|---|---|---|---|
-| JDK 8 | ✅ | ✅ | Requires `tools.jar` for full `s2jdbc-gen` Javadoc support |
-| JDK 11 | ✅ | ✅ | `--add-opens` required; `s2jdbc-gen` Javadoc extraction silently skipped |
-| JDK 17 | ✅ | ✅ | `--add-opens` required; primary target version |
-| JDK 21+ | ⚠️ Untested | ⚠️ Untested | May need additional `--add-opens` as more APIs are encapsulated |
+| JDK Version | Build | Runtime | CI Tested | Notes |
+|---|---|---|---|---|
+| JDK 8 | ✅ | ✅ | ✅ | Full compatibility; `s2jdbc-gen` uses JavaParser (no `tools.jar` needed) |
+| JDK 11 | ✅ | ✅ | ✅ | `--add-opens` required |
+| JDK 17 | ✅ | ✅ | ✅ | `--add-opens` required; primary target version |
+| JDK 21 | ✅ | ✅ | ✅ | `--add-opens` required; fully tested in CI |
 
-### 4.6 `s2jdbc-gen` Javadoc Limitation
+### 5.6 `s2jdbc-gen` Javadoc Support (JavaParser — Current)
 
-On **JDK 9+**, Javadoc comment extraction in `s2jdbc-gen` is **silently skipped**. The `com.sun.javadoc` API was removed from the JDK. Entity metadata generation completes successfully — only doc-comment-based metadata (e.g., `@Column` descriptions from Javadoc) is absent. This is expected behavior and not a bug.
+As of the modernized release, `s2jdbc-gen` uses [`com.github.javaparser:javaparser-core:3.25.10`](s2jdbc-gen/pom.xml:124) via [`JavadocASTReader`](s2jdbc-gen/src/main/java/org/seasar/extension/jdbc/gen/internal/meta/JavadocASTReader.java:44) for Javadoc extraction. This replaces the legacy `com.sun.javadoc` Doclet API (removed in JDK 9+). Javadoc comment extraction is now **fully functional on all JDK versions** — including `@MappedSuperclass` hierarchy traversal. See [Section 3](#3-s2jdbc-gen-doclet-api--javaparser-migration) for details.
 
 ---
 
-## 5. Verification Checklist
+## 6. Upgrading from Original Seasar 2.4.x
+
+If you are upgrading an application from the original Seasar 2.4.x (`seasarorg/seasar2`) to this modernized fork, follow this step-by-step checklist.
+
+### 6.1 Upgrade Checklist
+
+#### Phase 1: Preparation
+
+- [ ] **Inventory all `.dicon` files** in your project — list every file that references `<components>` or includes other dicon files
+- [ ] **Audit OGNL expressions** — in all `.dicon` and `.sql` (S2JDBC templates) files, search for:
+  - `@java.lang.Runtime@`
+  - `@java.lang.Class@`
+  - `@java.lang.System@`
+  - `@java.lang.reflect@`
+  - `Class.forName`
+  - `java.lang.ProcessBuilder`
+- [ ] **Identify `s2jdbc-gen` usage** — if you use the code generation Ant task or Maven plugin, note your current configuration
+- [ ] **Record current JDK version** used in development, CI, staging, and production
+
+#### Phase 2: Dependency Update
+
+- [ ] **Update Maven/Gradle dependencies**: Change Seasar2 artifact versions from `2.4.x` to `2.4.49`
+- [ ] **Remove any `tools.jar` references** from build scripts if they were needed for `s2jdbc-gen` (no longer required)
+- [ ] **Add `com.github.javaparser:javaparser-core:3.25.10`** to `s2jdbc-gen` dependencies if building from source
+
+#### Phase 3: JVM Configuration
+
+- [ ] **Add `--add-opens` flags** for JDK 9+ environments (see [Section 1.3](#13-configuration-examples)):
+  - `--add-opens java.base/java.lang=ALL-UNNAMED`
+  - `--add-opens java.base/java.util=ALL-UNNAMED`
+  - `--add-opens java.base/java.math=ALL-UNNAMED`
+  - `--add-opens java.base/java.net=ALL-UNNAMED`
+- [ ] **Configure Maven Surefire/Failsafe** with these flags in `<argLine>` (for JDK 9+ profiles)
+- [ ] **Update IDE run configurations** (IntelliJ IDEA, Eclipse) with these VM options
+- [ ] **Update production startup scripts** (shell scripts, Docker `JAVA_OPTS`, Kubernetes manifests)
+
+#### Phase 4: OGNL Migration
+
+- [ ] **Replace blocked OGNL expressions** (see [Section 2.4](#24-migration-for-affected-expressions)):
+  - `Runtime.exec()` / `ProcessBuilder` → move to Java component code
+  - `System.exit()` → remove or replace with managed shutdown
+  - `Class.forName()` → use Seasar2 component binding
+  - Reflective `invoke()`/`setAccessible()` → use Seasar2's DI container
+- [ ] **Validate S2JDBC SQL templates** — ensure `IF`/`BEGIN` blocks do not invoke system classes
+
+#### Phase 5: Testing & Validation
+
+- [ ] **Run full test suite** on target JDK (11+ recommended)
+- [ ] **Verify `s2jdbc-gen` entity generation** — confirm Javadoc comments are extracted correctly with the new JavaParser backend
+- [ ] **XXE security verification** — confirm no `.dicon` files reference external entities
+- [ ] **Smoke test in staging** with the same `--add-opens` flags as production
+- [ ] **Test HOT deploy** if used — verify the Issue #15 ClassLoader fix resolves any previous field-injection failures
+
+### 6.2 Common Issues
+
+| Symptom | Cause | Solution |
+|---|---|---|
+| `InaccessibleObjectException` at startup | Missing `--add-opens` flags | Add all four flags (see [Section 1](#1-jvm-arguments-java-9)) |
+| `SecurityException: Access denied` in OGNL | OGNL expression blocked by sandbox | Migrate expression to Java code (see [Section 2.4](#24-migration-for-affected-expressions)) |
+| `[ESSR0094] Can not set field` on HOT deploy | Issue #15 ClassLoader mismatch | Fixed in this release; ensure you are on `2.4.49` |
+| `PersistenceException: Persistence unit not found: X` | Missing persistence unit | Now throws clear `PersistenceException` with unit name |
+| `s2jdbc-gen` build fails on JDK 21 | Old version using `com.sun.javadoc` | Update to modernized `s2jdbc-gen` with JavaParser |
+| Date-format test failures on JDK 8 | CLDR vs JRE locale provider | Expected; use `-Djava.locale.providers=CLDR,JRE` (see [Section 4.3](#43-workaround-for-jdk-8-test-execution)) |
+
+---
+
+## 7. Verification Checklist
 
 After migration, confirm each item:
 
@@ -294,7 +391,8 @@ After migration, confirm each item:
 - [ ] **S2JDBC SQL templates** reviewed — `IF`/`BEGIN` blocks do not reference system classes
 - [ ] **Test suite passes** on target JDK version (JDK 11+ recommended)
 - [ ] **Date format tests** confirmed on JDK 11+ (JDK 8 failures are expected and acceptable)
-- [ ] **`s2jdbc-gen` entity generation** verified — Javadoc extraction silently skipped on JDK 9+
+- [ ] **`s2jdbc-gen` entity generation** verified — Javadoc extracted via JavaParser on all JDK versions
+- [ ] **`s2jdbc-gen` build** confirmed — no `tools.jar` dependency; compiles on JDK 21
 - [ ] **XXE protection** confirmed — no external entity references in `.dicon` files
 - [ ] **Production deployment** smoke-tested with `--add-opens` flags on target JVM
 

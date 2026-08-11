@@ -2,12 +2,13 @@
 
 **A lightweight, high-performance Dependency Injection (DI) container with powerful Aspect-Oriented Programming (AOP) capabilities for Java applications.**
 
-[![JDK](https://img.shields.io/badge/JDK-8%20%7C%2011%20%7C%2017-blue?logo=openjdk)](MIGRATION_GUIDE.md#44-jdk-version-compatibility-matrix)
+[![JDK](https://img.shields.io/badge/JDK-8%20%7C%2011%20%7C%2017%20%7C%2021-blue?logo=openjdk)](MIGRATION_GUIDE.md#55-jdk-version-compatibility-matrix)
 [![Maven](https://img.shields.io/badge/Maven-3.0+-C71A36?logo=apachemaven)](https://maven.apache.org/)
+[![CI](https://github.com/kkkkong/seasar2/actions/workflows/maven-ci.yml/badge.svg)](https://github.com/kkkkong/seasar2/actions/workflows/maven-ci.yml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green)](seasar2/LICENSE.txt)
 [![Status](https://img.shields.io/badge/Status-Modernized%20Fork-brightgreen)](#about-this-fork)
 
-> **This is a modernized fork** of the original [seasarorg/seasar2](https://github.com/seasarorg/seasar2) framework, upgraded to support JDK 8, 11, and 17 with critical security patches for XXE and OGNL injection vulnerabilities.
+> **This is a modernized fork** of the original [seasarorg/seasar2](https://github.com/seasarorg/seasar2) framework, upgraded to support JDK 8, 11, 17, and 21 with critical security patches for XXE and OGNL injection vulnerabilities, updated `s2jdbc-gen` to use JavaParser instead of the removed `com.sun.javadoc` API, and 100% green test suite across all supported JDKs.
 
 **Original Project:** [s2container.seasar.org](http://s2container.seasar.org/)
 
@@ -21,11 +22,25 @@ The original Seasar2 framework — first released in 2004 by [The Seasar Foundat
 
 | Area | Status | Details |
 |---|---|---|
-| **JDK 8 / 11 / 17** | ✅ Supported | Build and runtime compatibility |
+| **JDK 8 / 11 / 17 / 21** | ✅ Supported | Full build and runtime compatibility; multi-JDK CI tested |
 | **XXE Protection** | ✅ Patched | XML parsers hardened against external entity attacks |
 | **OGNL Sandbox** | ✅ Patched | Expression evaluator locked down against RCE |
-| **Test Suite** | ✅ Passing | No code regressions on JDK 17 |
-| **`s2jdbc-gen`** | ✅ Working | Compiles without `tools.jar` on JDK 9+ |
+| **Test Suite** | ✅ Passing | 100% green test suite across all 4 JDK versions |
+| **`s2jdbc-gen` JavaParser** | ✅ Refactored | Replaced `com.sun.javadoc` Doclet API with `com.github.javaparser:javaparser-core:3.25.10` for cross-JDK compilation |
+| **Mock Portlet Extensions** | ✅ Implemented | State-backed `MockPortletRequestImpl`, `MockPortalContextImpl`, `MockPortletPreferencesImpl` replacing `UnsupportedOperationException` |
+
+---
+
+## JDK Compatibility
+
+| JDK Version | Build | Runtime | CI Tested | Notes |
+|---|---|---|---|---|
+| **JDK 8** | ✅ | ✅ | ✅ | Full compatibility; `tools.jar` not required for `s2jdbc-gen` (JavaParser-based) |
+| **JDK 11** | ✅ | ✅ | ✅ | `--add-opens` JVM flags required (see [Migration Guide](MIGRATION_GUIDE.md#1-jvm-arguments-java-9)) |
+| **JDK 17** | ✅ | ✅ | ✅ | Primary target; `--add-opens` JVM flags required |
+| **JDK 21** | ✅ | ✅ | ✅ | `--add-opens` JVM flags required; fully tested in CI |
+
+> For detailed JVM configuration per JDK version, see the **[Migration Guide](MIGRATION_GUIDE.md#1-jvm-arguments-java-9)**.
 
 ---
 
@@ -74,7 +89,7 @@ A new security sandbox prevents Remote Code Execution (RCE) through OGNL express
 
 ### Prerequisites
 
-- Java 8 or later (JDK 11+ recommended; JDK 17 is the primary target)
+- Java 8 or later (JDK 17+ recommended; JDK 21 is the latest tested target)
 - Maven 3.0+
 
 ### Build from Source
@@ -95,7 +110,20 @@ cd ../s2jdbc-gen
 mvn clean install
 ```
 
-> **Important:** Run `mvn clean install` from each **module directory** — NOT the repository root. The root [`pom.xml`](pom.xml) is an aggregator-only POM.
+> **Important:** Run `mvn clean install` from each **module directory** — NOT the repository root. The root [`pom.xml`](pom.xml) is an aggregator-only POM (`<packaging>pom</packaging>`).
+
+### Java 17 / 21 Runtime Flags
+
+When running on **JDK 9+** (including 11, 17, 21), add these `--add-opens` JVM flags for Seasar2's reflection-based DI container, AOP proxies, and HotdeployBehavior:
+
+```
+--add-opens java.base/java.lang=ALL-UNNAMED
+--add-opens java.base/java.util=ALL-UNNAMED
+--add-opens java.base/java.math=ALL-UNNAMED
+--add-opens java.base/java.net=ALL-UNNAMED
+```
+
+These flags are pre-configured in the build POM's Maven Surefire plugin via the `jdk9plus` profile. For application runtime configuration (IDE, `java` command line, Gradle), see the [Migration Guide — JVM Arguments](MIGRATION_GUIDE.md#1-jvm-arguments-java-9).
 
 ### Running Tests
 
