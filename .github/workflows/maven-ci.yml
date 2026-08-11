@@ -28,5 +28,14 @@ jobs:
           java-version: ${{ matrix.java }}
           cache: 'maven'
 
-      - name: Build and test with Maven
-        run: mvn clean install -B
+      - name: Build seasar2 modules (s2-framework, s2-extension, s2-dist)
+        working-directory: seasar2
+        run: mvn clean install -B -Dfile.encoding=UTF-8
+
+      - name: Build s2-tiger
+        working-directory: s2-tiger
+        run: mvn clean install -B -Dfile.encoding=UTF-8
+
+      - name: Build s2jdbc-gen
+        working-directory: s2jdbc-gen
+        run: mvn clean install -B -Dfile.encoding=UTF-8
