@@ -7,12 +7,13 @@ This guide covers the required steps when migrating your Seasar2-based applicati
 ## Table of Contents
 
 1. [JVM Arguments (Java 9+)](#1-jvm-arguments-java-9)
-2. [OGNL Security Sandbox](#2-ognl-security-sandbox)
-3. [s2jdbc-gen: Doclet API → JavaParser Migration](#3-s2jdbc-gen-doclet-api--javaparser-migration)
-4. [Java 8 CLDR Note](#4-java-8-cldr-note)
-5. [Build Instructions](#5-build-instructions)
-6. [Upgrading from Original Seasar 2.4.x](#6-upgrading-from-original-seasar-24x)
-7. [Verification Checklist](#7-verification-checklist)
+2. [v2.4.49 Migration Guide](#v2-4-49-migration-guide)
+3. [OGNL Security Sandbox](#2-ognl-security-sandbox)
+4. [s2jdbc-gen: Doclet API → JavaParser Migration](#3-s2jdbc-gen-doclet-api--javaparser-migration)
+5. [Java 8 CLDR Note](#4-java-8-cldr-note)
+6. [Build Instructions](#5-build-instructions)
+7. [Upgrading from Original Seasar 2.4.x](#6-upgrading-from-original-seasar-24x)
+8. [Verification Checklist](#7-verification-checklist)
 
 ---
 
@@ -22,12 +23,17 @@ This guide covers the required steps when migrating your Seasar2-based applicati
 
 On **Java 9 and later** (JDK 11, JDK 17, JDK 21), you **MUST** add the following `--add-opens` JVM arguments. These enable Seasar2's reflection-based DI container, AOP dynamic proxy generation (via javassist), OGNL expression evaluation, and HotdeployBehavior to operate under the Java Platform Module System (JPMS):
 
+```bash
+--add-opens=java.base/java.math=ALL-UNNAMED
+--add-opens=java.base/java.net=ALL-UNNAMED
+--add-opens=java.base/java.lang=ALL-UNNAMED
+--add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+--add-opens=java.base/java.util=ALL-UNNAMED
+--add-opens=java.base/java.text=ALL-UNNAMED
+--add-opens=java.base/java.io=ALL-UNNAMED
 ```
---add-opens java.base/java.lang=ALL-UNNAMED
---add-opens java.base/java.util=ALL-UNNAMED
---add-opens java.base/java.math=ALL-UNNAMED
---add-opens java.base/java.net=ALL-UNNAMED
-```
+
+On **JDK 11**, the four-package set above is also sufficient, but the full seven-package set is recommended for forward compatibility with JDK 17/21.
 
 ### 1.2 Why These Are Needed
 
@@ -107,6 +113,84 @@ java \
 ```
 
 > **Important:** If you use both `<argLine>` in Surefire and Failsafe, they are independent — configure both plugins.
+
+On **JDK 17+**, the `java17-plus-surefire` Maven profile is auto-activated and applies the full `--add-opens` set together with `-Duser.timezone=Asia/Tokyo`, `-Duser.language=ja`, `-Duser.country=JP`, and `-Djava.locale.providers=CLDR,JRE`.
+
+---
+
+## v2.4.49 Migration Guide
+
+This section summarizes the key changes introduced in the **v2.4.49 modernization release** and the actions required when upgrading from earlier Seasar2 versions.
+
+### OGNL Upgrade
+
+| Aspect | Before | After |
+|---|---|---|
+| Dependency | `ognl:ognl:2.6.9-patch-20090427` (patched JAR) | `ognl:ognl:2.7.3` (official Maven Central) |
+| Repository | `maven.seasar.org` legacy repository | Removed; uses Maven Central |
+| Memory leak on HOT deploy | Static OGNL caches accumulated across ClassLoader generations | [`OgnlUtil.initialize()`](seasar2/s2-framework/src/main/java/org/seasar/framework/util/OgnlUtil.java:45) registers a [`DisposableUtil`](seasar2/s2-framework/src/main/java/org/seasar/framework/util/DisposableUtil.java:38) hook that calls `OgnlRuntime.clearCache()` on shutdown |
+
+**Action required:**
+
+- Remove any local patched OGNL JARs from your build.
+- Ensure your application server's shutdown path triggers Seasar2's `DisposableUtil` disposal (standard in container-managed deployments).
+
+### CLDR Date Format Compatibility (JEP 252)
+
+[`DateConversionUtil`](seasar2/s2-framework/src/main/java/org/seasar/framework/util/DateConversionUtil.java:33) now sanitizes time components (`H:mm`) from Unicode CLDR patterns and supports unseparated date strings such as `YYYYMMDD` consistently on JDK 8, 11, 17, and 21.
+
+**Action required:**
+
+- No code changes are required.
+- If your tests pin exact `SimpleDateFormat` pattern strings, expect pattern differences between JDK 8 (`JRE` provider) and JDK 11+ (`CLDR` provider). Use `-Djava.locale.providers=CLDR,JRE` for parity on JDK 8.
+
+### Java 17+ Strong Encapsulation (JEP 403)
+
+JDK 17+ enforces strong encapsulation of JDK internals. Seasar2's reflection-based DI, AOP, OGNL, and Hotdeploy require the following `--add-opens` flags at runtime:
+
+```bash
+--add-opens=java.base/java.math=ALL-UNNAMED
+--add-opens=java.base/java.net=ALL-UNNAMED
+--add-opens=java.base/java.lang=ALL-UNNAMED
+--add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+--add-opens=java.base/java.util=ALL-UNNAMED
+--add-opens=java.base/java.text=ALL-UNNAMED
+--add-opens=java.base/java.io=ALL-UNNAMED
+```
+
+**Action required:**
+
+- Add the flags above to production startup scripts, application-server `JAVA_OPTS`, IDE run configurations, and CI test `argLine` values.
+- The flags are applied automatically during Maven Surefire execution via the `java17-plus-surefire` profile.
+
+### Proprietary Dependency Handling (`uow_api`)
+
+IBM WebSphere `uow_api:6` is a proprietary API that cannot be published to Maven Central. It is kept in the repository at [`seasar2/lib/uow_api-6.jar`](seasar2/lib/uow_api-6.jar) and the local repository at [`seasar2/local-repo/com/ibm/websphere/uow_api/6/`](seasar2/local-repo/com/ibm/websphere/uow_api/6/uow_api-6.pom). In [`s2-extension/pom.xml`](seasar2/s2-extension/pom.xml:131) it is declared as:
+
+```xml
+<dependency>
+    <groupId>com.ibm.websphere</groupId>
+    <artifactId>uow_api</artifactId>
+    <version>6</version>
+    <scope>provided</scope>
+    <optional>true</optional>
+</dependency>
+```
+
+**Action required:**
+
+- For local or CI builds, install the JAR into your local `~/.m2` repository:
+
+  ```bash
+  mvn install:install-file \
+      -Dfile=seasar2/lib/uow_api-6.jar \
+      -DgroupId=com.ibm.websphere \
+      -DartifactId=uow_api \
+      -Dversion=6 \
+      -Dpackaging=jar
+  ```
+
+- If you do not deploy to WebSphere, the `provided`/`optional` scope means the dependency is not propagated to your application.
 
 ---
 

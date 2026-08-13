@@ -89,7 +89,7 @@ A new security sandbox prevents Remote Code Execution (RCE) through OGNL express
 
 ### Prerequisites
 
-- Java 8 or later (JDK 17+ recommended; JDK 21 is the latest tested target)
+- Java 8 or later (JDK 8, 11, 17, and 21 are supported; JDK 17+ recommended for production)
 - Maven 3.0+
 
 ### Build from Source
@@ -112,24 +112,11 @@ mvn clean install
 
 > **Important:** Run `mvn clean install` from each **module directory** — NOT the repository root. The root [`pom.xml`](pom.xml) is an aggregator-only POM (`<packaging>pom</packaging>`).
 
-### Java 17 / 21 Runtime Flags
-
-When running on **JDK 9+** (including 11, 17, 21), add these `--add-opens` JVM flags for Seasar2's reflection-based DI container, AOP proxies, and HotdeployBehavior:
-
-```
---add-opens java.base/java.lang=ALL-UNNAMED
---add-opens java.base/java.util=ALL-UNNAMED
---add-opens java.base/java.math=ALL-UNNAMED
---add-opens java.base/java.net=ALL-UNNAMED
-```
-
-These flags are pre-configured in the build POM's Maven Surefire plugin via the `jdk9plus` profile. For application runtime configuration (IDE, `java` command line, Gradle), see the [Migration Guide — JVM Arguments](MIGRATION_GUIDE.md#1-jvm-arguments-java-9).
-
 ### Running Tests
 
 ```bash
 # Run all tests
-mvn test
+mvn clean test
 
 # Run a single test class
 mvn test -Dtest=ClassName
@@ -143,6 +130,24 @@ mvn test -Phsqldb       # HSQLDB (default)
 # Skip tests during build
 mvn clean install -DskipTests
 ```
+
+### Running on Java 17+
+
+When deploying on **JDK 17+** (also compatible with JDK 11), add the following `--add-opens` JVM flags to your application server or startup script. These flags allow Seasar2's reflection-based DI container, AOP proxies, OGNL expression evaluation, and HotdeployBehavior to access internal JDK modules:
+
+```bash
+--add-opens=java.base/java.math=ALL-UNNAMED
+--add-opens=java.base/java.net=ALL-UNNAMED
+--add-opens=java.base/java.lang=ALL-UNNAMED
+--add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+--add-opens=java.base/java.util=ALL-UNNAMED
+--add-opens=java.base/java.text=ALL-UNNAMED
+--add-opens=java.base/java.io=ALL-UNNAMED
+```
+
+> These flags are applied automatically during Maven Surefire test execution via the `jdk9plus` profile. For application runtime (IDE, `java` command line, application server), add them to your startup script or `JAVA_OPTS`.
+>
+> For detailed configuration examples, see the [Migration Guide — JVM Arguments](MIGRATION_GUIDE.md#1-jvm-arguments-java-9).
 
 ### Maven Dependency
 

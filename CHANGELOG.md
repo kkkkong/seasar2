@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.49] — Modernization Release
+
+### Migration Guide
+
+For detailed upgrade instructions, see the **[v2.4.49 Migration Guide](MIGRATION_GUIDE.md#v2-4-49-migration-guide)** covering:
+
+- `--add-opens` JVM flags for JDK 9+ / Java 17+ deployments
+- OGNL upgrade and `OgnlRuntime.clearCache()` memory-leak fix
+- JEP 252 (CLDR) date-format compatibility
+- `uow_api` proprietary dependency handling
+
 ### Security
 
 - **XXE Protection**: Hardened XML parsers in [`SAXParserFactoryUtil.newInstance()`](seasar2/s2-framework/src/main/java/org/seasar/framework/util/SAXParserFactoryUtil.java:47) and [`DocumentBuilderFactoryUtil.newInstance()`](seasar2/s2-framework/src/main/java/org/seasar/framework/util/DocumentBuilderFactoryUtil.java:43) by disabling DOCTYPE declarations, external general entities, external parameter entities, and XInclude processing. [`XmlS2ContainerBuilder.createSaxHandlerParser()`](seasar2/s2-framework/src/main/java/org/seasar/framework/container/factory/XmlS2ContainerBuilder.java:185) re-enables DTD for `.dicon` schema validation while keeping external entity resolution blocked.
@@ -30,9 +41,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **JDK 21 build and CI support**: Extended the build matrix and JVM flag profile to include JDK 21. The `jdk9plus` Maven profile auto-activates `--add-opens` flags for all JDK 9+ builds.
 
+- **JDK 17+ `java17-plus-surefire` Maven profile**: New auto-activated profile (`<activation><jdk>[17,)</jdk></activation>`) that applies the full set of `--add-opens` JVM options required for JDK 17+ strong encapsulation (JEP 403) while preserving Asia/Tokyo timezone and Japanese locale (`ja_JP`) settings.
+
 ### Changed
 
 - **Removed `com.sun.javadoc` dependencies from `s2jdbc-gen`**: The legacy `CommentDoclet` class and all `com.sun.javadoc.*` mirror interfaces have been removed. Replaced by [`JavadocASTReader`](s2jdbc-gen/src/main/java/org/seasar/extension/jdbc/gen/internal/meta/JavadocASTReader.java:44) using `com.github.javaparser:javaparser-core:3.25.10` (see [Added](#added)). This eliminates the `tools.jar` requirement and enables cross-JDK compilation (JDK 8–21).
+
+- **OGNL dependency upgraded to official Central Maven artifact**: Replaced the legacy patched OGNL dependency (`ognl:ognl:2.6.9-patch-20090427` from `maven.seasar.org`) with the official Maven Central release [`ognl:ognl:2.7.3`](seasar2/s2-framework/pom.xml:106). The Seasar2-specific patch JAR and the `maven.seasar.org` legacy repository declaration have been removed from the dependency path.
+
+- **HOT deploy OGNL memory leak fix**: [`OgnlUtil.initialize()`](seasar2/s2-framework/src/main/java/org/seasar/framework/util/OgnlUtil.java:45) now registers a native Seasar2 [`DisposableUtil`](seasar2/s2-framework/src/main/java/org/seasar/framework/util/DisposableUtil.java:38) hook that calls `OgnlRuntime.clearCache()` on container shutdown. This prevents class metadata retained in OGNL's static caches from leaking across Hotdeploy class-loader generations.
+
+- **JEP 252 CLDR date-format compatibility**: [`DateConversionUtil`](seasar2/s2-framework/src/main/java/org/seasar/framework/util/DateConversionUtil.java:33) was updated to sanitize time components (`H:mm`) from Unicode CLDR patterns and to accept unseparated date strings (for example, `YYYYMMDD`) consistently across JDK 8, 11, 17, and 21.
+
+- **`uow_api` proprietary dependency declared as provided/optional**: IBM WebSphere `uow_api:6` remains bundled at [`seasar2/lib/uow_api-6.jar`](seasar2/lib/uow_api-6.jar) and in the local repository at [`seasar2/local-repo/com/ibm/websphere/uow_api/6/`](seasar2/local-repo/com/ibm/websphere/uow_api/6/uow_api-6.pom). The dependency in [`s2-extension/pom.xml`](seasar2/s2-extension/pom.xml:131) is now declared as `<scope>provided</scope>` and `<optional>true</optional>`, so local/CI builds can install it into `~/.m2` with `mvn install:install-file` without affecting downstream consumers.
 
 - **Updated `S2JDBCGenMessages_ja.properties`**: Error message resources updated to reflect JavaParser-based parsing. Notably, `E0030` now reads "Javaソースファイル{0}の解析に失敗しました" ("Failed to parse Java source file {0}"), replacing the previous Doclet-specific wording.
 
