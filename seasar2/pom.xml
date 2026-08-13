@@ -17,14 +17,6 @@
     <module>s2-dist</module>
   </modules>
 
-  <!-- In-project repository for proprietary/third-party JARs (e.g. IBM uow_api) -->
-  <repositories>
-    <repository>
-      <id>in-project-repo</id>
-      <url>file://${maven.multiModuleProjectDirectory}/seasar2/local-repo</url>
-    </repository>
-  </repositories>
-
   <!-- More Project Information -->
   <name>Seasar2</name>
   <description>DI Container with AOP</description>

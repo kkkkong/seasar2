@@ -28,6 +28,16 @@ jobs:
           java-version: ${{ matrix.java }}
           cache: 'maven'
 
+      - name: Install Proprietary IBM uow_api JAR
+        working-directory: ./seasar2
+        run: |
+          mvn install:install-file \
+            -Dfile=lib/uow_api-6.jar \
+            -DgroupId=com.ibm.websphere \
+            -DartifactId=uow_api \
+            -Dversion=6 \
+            -Dpackaging=jar
+
       - name: Build seasar2 modules (s2-framework, s2-extension, s2-dist)
         working-directory: seasar2
         run: mvn clean install -B
