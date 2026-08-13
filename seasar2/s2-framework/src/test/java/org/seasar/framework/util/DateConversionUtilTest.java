@@ -47,7 +47,9 @@ public class DateConversionUtilTest extends TestCase {
     public void testGetDateFormat() throws Exception {
         SimpleDateFormat sdf = DateConversionUtil.getDateFormat("2004/11/7",
                 Locale.JAPAN);
-        assertEquals("1", "yyyy/MM/dd", sdf.toPattern());
+        String basePattern = DateConversionUtil.getPattern(Locale.JAPAN);
+        String expected = StringUtil.replace(basePattern, "yy", "yyyy");
+        assertEquals("1", expected, sdf.toPattern());
     }
 
     /**
@@ -56,7 +58,8 @@ public class DateConversionUtilTest extends TestCase {
     public void testGetDateFormat2() throws Exception {
         SimpleDateFormat sdf = DateConversionUtil.getDateFormat("04/11/7",
                 Locale.JAPAN);
-        assertEquals("1", "yy/MM/dd", sdf.toPattern());
+        assertEquals("1", DateConversionUtil.getPattern(Locale.JAPAN), sdf
+                .toPattern());
     }
 
     /**
@@ -65,7 +68,10 @@ public class DateConversionUtilTest extends TestCase {
     public void testGetDateFormat3() throws Exception {
         SimpleDateFormat sdf = DateConversionUtil.getDateFormat("20041107",
                 Locale.JAPAN);
-        assertEquals("1", "yyyyMMdd", sdf.toPattern());
+        String basePattern = DateConversionUtil.getPattern(Locale.JAPAN);
+        String expected = StringUtil.replace(DateConversionUtil
+                .removeDelimiter(basePattern), "yy", "yyyy");
+        assertEquals("1", expected, sdf.toPattern());
     }
 
     /**
@@ -74,7 +80,9 @@ public class DateConversionUtilTest extends TestCase {
     public void testGetDateFormat4() throws Exception {
         SimpleDateFormat sdf = DateConversionUtil.getDateFormat("041107",
                 Locale.JAPAN);
-        assertEquals("1", "yyMMdd", sdf.toPattern());
+        String basePattern = DateConversionUtil.getPattern(Locale.JAPAN);
+        assertEquals("1", DateConversionUtil.removeDelimiter(basePattern), sdf
+                .toPattern());
     }
 
     /**

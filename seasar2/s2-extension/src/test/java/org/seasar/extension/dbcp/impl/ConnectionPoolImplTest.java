@@ -497,5 +497,11 @@ public class ConnectionPoolImplTest extends S2TestCase {
 
     protected void setUp() throws Exception {
         include(PATH);
+        // TimeoutManager is a JVM-wide singleton whose cleanup thread removes
+        // canceled TimeoutTask entries only on its ~1 second sweep. Without
+        // clearing here, canceled tasks leaked from previous tests (in this
+        // class or other classes in the same JVM) can inflate the task count
+        // asserted in testClose(), making it flaky.
+        TimeoutManager.getInstance().clear();
     }
 }

@@ -277,13 +277,6 @@
     <developerConnection>scm:git:git@github.com:seasarorg/seasar2.git</developerConnection>
     <url>git@github.com:seasarorg/seasar2.git</url>
   </scm>
-  <repositories>
-    <repository>
-      <id>maven.seasar.org</id>
-      <name>The Seasar Foundation Maven2 Repository</name>
-      <url>https://maven.seasar.org/maven2</url>
-    </repository>
-  </repositories>
   <distributionManagement>
     <repository>
       <uniqueVersion>false</uniqueVersion>
@@ -333,8 +326,9 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.2.5</version>
           <configuration>
-            <argLine>-noverify -Duser.timezone=Asia/Tokyo -Duser.language=ja -Duser.country=JP -Dfile.encoding=UTF-8</argLine>
+            <argLine>-Djava.locale.providers=CLDR,JRE -Duser.timezone=Asia/Tokyo -Duser.language=ja -Duser.country=JP -Dfile.encoding=UTF-8</argLine>
           </configuration>
         </plugin>
       </plugins>
@@ -383,6 +377,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.8</version>
         <executions>
           <execution>
             <id>ant-dist</id>
@@ -463,4 +458,66 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <!-- Profiles -->
+  <profiles>
+    <!--
+      JDK 9+ requires the add-opens JVM options to allow the framework's
+      reflective access to JDK internals (used for bytecode manipulation / AOP).
+      The flags are intentionally NOT applied on Java 8, which rejects
+      the add-opens JVM option and would fail surefire startup.
+    -->
+    <profile>
+      <id>jdk9plus</id>
+      <activation>
+        <jdk>[9,)</jdk>
+      </activation>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-surefire-plugin</artifactId>
+              <version>3.2.5</version>
+              <configuration>
+                <argLine>-Dfile.encoding=UTF-8 --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.text=ALL-UNNAMED -Djava.locale.providers=CLDR,JRE -Duser.timezone=Asia/Tokyo -Duser.language=ja -Duser.country=JP</argLine>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
+    <profile>
+      <id>java17-plus-surefire</id>
+      <activation>
+        <jdk>[17,)</jdk>
+      </activation>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-surefire-plugin</artifactId>
+              <configuration>
+                <argLine>
+                  --add-opens=java.base/java.math=ALL-UNNAMED
+                  --add-opens=java.base/java.net=ALL-UNNAMED
+                  --add-opens=java.base/java.lang=ALL-UNNAMED
+                  --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+                  --add-opens=java.base/java.util=ALL-UNNAMED
+                  --add-opens=java.base/java.text=ALL-UNNAMED
+                  --add-opens=java.base/java.io=ALL-UNNAMED
+                  -Djava.locale.providers=CLDR,JRE
+                  -Duser.timezone=Asia/Tokyo
+                  -Duser.language=ja
+                  -Duser.country=JP
+                  -Dfile.encoding=UTF-8
+                </argLine>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
+  </profiles>
 </project>

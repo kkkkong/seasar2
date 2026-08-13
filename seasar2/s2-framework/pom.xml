@@ -106,14 +106,7 @@
     <dependency>
       <groupId>ognl</groupId>
       <artifactId>ognl</artifactId>
-      <version>2.6.9-patch-20090427</version>
-      <type>jar</type>
-      <exclusions>
-        <exclusion>
-          <groupId>jboss</groupId>
-          <artifactId>javassist</artifactId>
-        </exclusion>
-      </exclusions>
+      <version>2.7.3</version>
     </dependency>
     <dependency>
       <groupId>commons-logging</groupId>

@@ -188,6 +188,18 @@ public class XmlS2ContainerBuilder extends AbstractS2ContainerBuilder {
         factory.setValidating(true);
         factory.setNamespaceAware(true);
         SAXParserFactoryUtil.setXIncludeAware(factory, true);
+        // dicon files are DTD-based (Seasar DTD resolved from the classpath
+        // through the registered EntityResolver), so the DOCTYPE declaration
+        // must be allowed again for this validating parser. External entities
+        // remain disabled by SAXParserFactoryUtil.newInstance().
+        try {
+            factory.setFeature(
+                "http://apache.org/xml/features/disallow-doctype-decl",
+                false);
+        } catch (Throwable e) {
+            // ignore if not supported (old parsers may throw
+            // AbstractMethodError or UnsupportedOperationException)
+        }
 
         final SAXParser saxParser = SAXParserFactoryUtil.newSAXParser(factory);
 

@@ -19,10 +19,14 @@ import java.util.Map;
 
 import ognl.ClassResolver;
 import ognl.Ognl;
+import ognl.OgnlContext;
 import ognl.OgnlException;
+import ognl.OgnlRuntime;
 
 import org.seasar.framework.container.S2Container;
 import org.seasar.framework.exception.OgnlRuntimeException;
+import org.seasar.framework.util.Disposable;
+import org.seasar.framework.util.DisposableUtil;
 
 /**
  * Ognl用のユーティリティクラスです。
@@ -31,6 +35,23 @@ import org.seasar.framework.exception.OgnlRuntimeException;
  * 
  */
 public class OgnlUtil {
+
+    private static boolean initialized = false;
+
+    static {
+        initialize();
+    }
+
+    public static synchronized void initialize() {
+        if (!initialized) {
+            DisposableUtil.add(new Disposable() {
+                public void dispose() {
+                    OgnlRuntime.clearCache();
+                }
+            });
+            initialized = true;
+        }
+    }
 
     /**
      * インスタンスを構築します。
@@ -93,12 +114,7 @@ public class OgnlUtil {
     public static Object getValue(Object exp, Map ctx, Object root,
             String path, int lineNumber) throws OgnlRuntimeException {
         try {
-            Map newCtx = addClassResolverIfNecessary(ctx, root);
-            if (newCtx != null) {
-                return Ognl.getValue(exp, newCtx, root);
-            } else {
-                return Ognl.getValue(exp, root);
-            }
+            return Ognl.getValue(exp, createContext(ctx, root), root);
         } catch (OgnlException ex) {
             throw new OgnlRuntimeException(ex.getReason() == null ? ex : ex
                     .getReason(), path, lineNumber);
@@ -137,6 +153,49 @@ public class OgnlUtil {
         }
     }
 
+    /**
+     * Creates an OGNL context map for expression evaluation. The context is
+     * always an {@link OgnlContext} restricted by
+     * {@link OgnlSecurityMemberAccess} so that dangerous JDK classes (such as
+     * <code>java.lang.Runtime</code>) cannot be accessed from OGNL expressions
+     * in dicon files and SQL templates.
+     *
+     * @param ctx
+     *            the existing OGNL context map, or <code>null</code>
+     * @param root
+     *            the root object of the OGNL expression
+     * @return a restricted {@link OgnlContext}
+     */
+    static OgnlContext createContext(Map ctx, Object root) {
+        OgnlContext newCtx;
+        if (ctx instanceof OgnlContext) {
+            newCtx = (OgnlContext) ctx;
+        } else if (ctx != null) {
+            newCtx = new OgnlContext();
+            newCtx.setValues(ctx);
+        } else {
+            newCtx = new OgnlContext();
+        }
+        if (root instanceof S2Container) {
+            S2Container container = (S2Container) root;
+            ClassLoader classLoader = container.getClassLoader();
+            if (classLoader != null) {
+                newCtx.setClassResolver(new ClassResolverImpl(classLoader));
+            }
+        }
+        newCtx.setMemberAccess(new OgnlSecurityMemberAccess());
+        return newCtx;
+    }
+
+    /**
+     * Adds a {@link ClassResolver} to the context if necessary.
+     *
+     * @param ctx
+     *            the OGNL context map
+     * @param root
+     *            the root object of the OGNL expression
+     * @return the OGNL context map
+     */
     static Map addClassResolverIfNecessary(Map ctx, Object root) {
         if (root instanceof S2Container) {
             S2Container container = (S2Container) root;

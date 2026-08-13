@@ -45,7 +45,38 @@ public class SAXParserFactoryUtil {
      * @return {@link SAXParserFactory}の新しいインスタンス
      */
     public static SAXParserFactory newInstance() {
-        return SAXParserFactory.newInstance();
+        SAXParserFactory factory = SAXParserFactory.newInstance();
+        try {
+            factory.setFeature(
+                "http://apache.org/xml/features/disallow-doctype-decl",
+                true);
+        } catch (Throwable e) {
+            // ignore if not supported (old parsers may throw
+            // AbstractMethodError or UnsupportedOperationException)
+        }
+        try {
+            factory.setFeature(
+                "http://xml.org/sax/features/external-general-entities",
+                false);
+        } catch (Throwable e) {
+            // ignore if not supported (old parsers may throw
+            // AbstractMethodError or UnsupportedOperationException)
+        }
+        try {
+            factory.setFeature(
+                "http://xml.org/sax/features/external-parameter-entities",
+                false);
+        } catch (Throwable e) {
+            // ignore if not supported (old parsers may throw
+            // AbstractMethodError or UnsupportedOperationException)
+        }
+        try {
+            factory.setXIncludeAware(false);
+        } catch (Throwable e) {
+            // ignore if not supported (old parsers may throw
+            // AbstractMethodError or UnsupportedOperationException)
+        }
+        return factory;
     }
 
     /**
@@ -80,15 +111,25 @@ public class SAXParserFactoryUtil {
 
     /**
      * XIncludeの有効／無効を設定します。
-     * 
+     *
      * @param spf
      *            {@link SAXParserFactory}
      * @param state
      *            XIncludeを有効にするなら<code>true</code>
-     * @return XIncludeの有効／無効を設定できた場合は<code>true</code>
+     * @return XIncludeの有効／無効を設定できる場合は<code>true</code>
      */
     public static boolean setXIncludeAware(final SAXParserFactory spf,
             final boolean state) {
+        try {
+            // Prefer the public JAXP API so that this works on JDK 9+ where the
+            // JDK internal implementation class lives in a non-exported module
+            // and is therefore not accessible via reflection.
+            spf.setXIncludeAware(state);
+            return true;
+        } catch (final Throwable ignore) {
+            // fall through to reflection for parsers that declare the method
+            // but whose JAXP API implementation does not support XInclude.
+        }
         try {
             final Method method = spf.getClass().getMethod("setXIncludeAware",
                     new Class[] { boolean.class });

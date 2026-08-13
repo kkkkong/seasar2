@@ -23,6 +23,9 @@
   <profiles>
     <profile>
       <id>standard</id>
+      <properties>
+        <database>standard</database>
+      </properties>
       <dependencies>
         <dependency>
           <groupId>org.apache.derby</groupId>
@@ -56,9 +59,15 @@
     </profile>
     <profile>
       <id>hsqldb</id>
+      <properties>
+        <database>hsqldb</database>
+      </properties>
     </profile>
     <profile>
       <id>h2</id>
+      <properties>
+        <database>h2</database>
+      </properties>
       <dependencies>
         <dependency>
           <groupId>com.h2database</groupId>
@@ -71,6 +80,9 @@
     </profile>
     <profile>
       <id>postgre</id>
+      <properties>
+        <database>postgre</database>
+      </properties>
       <dependencies>
         <dependency>
           <groupId>postgresql</groupId>
@@ -83,6 +95,9 @@
     </profile>
     <profile>
       <id>mysql</id>
+      <properties>
+        <database>mysql</database>
+      </properties>
       <dependencies>
         <dependency>
           <groupId>mysql</groupId>
@@ -95,6 +110,9 @@
     </profile>
     <profile>
       <id>oracle</id>
+      <properties>
+        <database>oracle</database>
+      </properties>
       <dependencies>
         <dependency>
           <groupId>com.oracle</groupId>
@@ -107,6 +125,9 @@
     </profile>
     <profile>
       <id>db2</id>
+      <properties>
+        <database>db2</database>
+      </properties>
       <dependencies>
         <dependency>
           <groupId>com.ibm</groupId>
@@ -119,6 +140,9 @@
     </profile>
     <profile>
       <id>mssql2005</id>
+      <properties>
+        <database>mssql2005</database>
+      </properties>
       <dependencies>
         <dependency>
           <groupId>com.microsoft</groupId>
@@ -139,8 +163,8 @@
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
           <configuration>
-            <source>1.5</source>
-            <target>1.5</target>
+            <source>1.8</source>
+            <target>1.8</target>
             <encoding>UTF-8</encoding>
           </configuration>
         </plugin>

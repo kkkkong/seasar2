@@ -132,7 +132,6 @@
       <groupId>com.ibm.websphere</groupId>
       <artifactId>uow_api</artifactId>
       <version>6</version>
-      <type>jar</type>
       <scope>provided</scope>
       <optional>true</optional>
     </dependency>

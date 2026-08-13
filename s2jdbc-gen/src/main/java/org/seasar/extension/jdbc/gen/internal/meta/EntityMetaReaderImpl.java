@@ -17,23 +17,25 @@ package org.seasar.extension.jdbc.gen.internal.meta;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import javax.persistence.Entity;
 
 import org.seasar.extension.jdbc.EntityMeta;
 import org.seasar.extension.jdbc.EntityMetaFactory;
-import org.seasar.extension.jdbc.gen.internal.exception.DocletUnavailableRuntimeException;
+import org.seasar.extension.jdbc.PropertyMeta;
 import org.seasar.extension.jdbc.gen.internal.exception.EntityClassNotFoundRuntimeException;
-import org.seasar.extension.jdbc.gen.internal.util.FileUtil;
+import org.seasar.extension.jdbc.gen.internal.exception.SourceParsingRuntimeException;
+import org.seasar.extension.jdbc.gen.internal.meta.JavadocASTReader.JavadocResult;
+import org.seasar.extension.jdbc.gen.internal.util.EntityMetaUtil;
+import org.seasar.extension.jdbc.gen.internal.util.PropertyMetaUtil;
 import org.seasar.extension.jdbc.gen.meta.EntityMetaReader;
-import org.seasar.framework.log.Logger;
 import org.seasar.framework.util.ClassTraversal;
 import org.seasar.framework.util.ClassUtil;
 import org.seasar.framework.util.ClassTraversal.ClassHandler;
-
-import com.sun.javadoc.Doclet;
 
 /**
  * {@link EntityMetaReader}の実装クラスです。
@@ -41,20 +43,6 @@ import com.sun.javadoc.Doclet;
  * @author taedium
  */
 public class EntityMetaReaderImpl implements EntityMetaReader {
-
-    /** ロガー */
-    protected static Logger logger = Logger
-            .getLogger(EntityMetaReaderImpl.class);
-
-    /** {@link Doclet}が使用可能な場合{@code true} */
-    protected static boolean docletAvailable;
-    static {
-        try {
-            Class.forName("com.sun.javadoc.Doclet"); // tools.jar
-            docletAvailable = true;
-        } catch (final Throwable ignore) {
-        }
-    }
 
     /** ルートディレクトリ */
     protected File classpathDir;
@@ -75,16 +63,19 @@ public class EntityMetaReaderImpl implements EntityMetaReader {
     protected boolean readComment;
 
     /**
-     * javaファイルが存在するディレクトリのリスト、{@code useComment}が{@code true}の場合{@code null}
+     * javaファイルが存在するディレクトリのリスト、{@code readComment}が{@code true}の場合{@code null}
      * であってはならない
      */
     protected List<File> javaFileSrcDirList = new ArrayList<File>();
 
     /**
-     * javaファイルのエンコーディング、{@code useComment}が{@code true}の場合{@code null}
+     * javaファイルのエンコーディング、{@code readComment}が{@code true}の場合{@code null}
      * であってはならない
      */
     protected String javaFileEncoding;
+
+    /** JavadocコメントのASTリーダ */
+    protected JavadocASTReader javadocAstReader = new JavadocASTReader();
 
     /**
      * インタスタンスを構築します。
@@ -225,51 +216,105 @@ public class EntityMetaReaderImpl implements EntityMetaReader {
      *            エンティティメタデータのリスト
      */
     protected void readComment(List<EntityMeta> entityMetaList) {
-        if (!docletAvailable) {
-            throw new DocletUnavailableRuntimeException();
-        }
-        String[] args = createDocletArgs();
-        StringBuilder buf = new StringBuilder();
-        for (String arg : args) {
-            buf.append(arg).append(" ");
-        }
-        logger.log("DS2JDBCGen0019", new Object[] { buf.toString() });
-
-        CommentDocletContext.setEntityMetaList(entityMetaList);
-        try {
-            com.sun.tools.javadoc.Main.execute(args);
-        } finally {
-            CommentDocletContext.setEntityMetaList(null);
+        for (EntityMeta entityMeta : entityMetaList) {
+            doReadComment(entityMeta);
         }
     }
 
     /**
-     * {@link Doclet}の引数の配列を作成します。
+     * 1つのエンティティメタデータに対してコメントを読み込みます。
      * 
-     * @return {@link Doclet}の引数の配列
+     * @param entityMeta
+     *            エンティティメタデータ
      */
-    protected String[] createDocletArgs() {
-        StringBuilder srcDirListBuf = new StringBuilder();
-        for (File dir : javaFileSrcDirList) {
-            srcDirListBuf.append(FileUtil.getCanonicalPath(dir));
-            srcDirListBuf.append(File.pathSeparator);
+    protected void doReadComment(EntityMeta entityMeta) {
+        Class<?> clazz = entityMeta.getEntityClass();
+        JavadocResult result = readJavadoc(clazz);
+        if (result == null) {
+            return;
         }
-        srcDirListBuf.setLength(srcDirListBuf.length()
-                - File.pathSeparator.length());
+        EntityMetaUtil.setComment(entityMeta, result.classComment);
 
-        List<String> args = new ArrayList<String>();
-        args.add("-doclet");
-        args.add(CommentDoclet.class.getName());
-        args.add("-sourcepath");
-        args.add(srcDirListBuf.toString());
-        args.add("-encoding");
-        args.add(javaFileEncoding);
-        args.add("-subpackages");
-        args.add(packageName);
-        if (logger.isDebugEnabled()) {
-            args.add("-verbose");
+        Set<String> processedPropertyNameSet = new HashSet<String>();
+        mergePropertyComments(entityMeta, result, processedPropertyNameSet);
+
+        Class<?> superclass = clazz.getSuperclass();
+        while (superclass != null
+                && !Object.class.getName().equals(superclass.getName())) {
+            JavadocResult superResult = readJavadoc(superclass);
+            if (superResult == null || !superResult.mappedSuperclass) {
+                break;
+            }
+            mergePropertyComments(entityMeta, superResult,
+                    processedPropertyNameSet);
+            superclass = superclass.getSuperclass();
         }
-        return args.toArray(new String[args.size()]);
+    }
+
+    /**
+     * 指定されたクラスのJavaソースファイルからJavadocを読み取ります。
+     * 
+     * @param clazz
+     *            クラス
+     * @return Javadocの読み取り結果、ソースファイルが見つからない場合は{@code null}
+     */
+    protected JavadocResult readJavadoc(Class<?> clazz) {
+        File javaFile = findJavaFile(clazz);
+        if (javaFile == null) {
+            return null;
+        }
+        try {
+            return javadocAstReader.read(javaFile, javaFileEncoding);
+        } catch (RuntimeException e) {
+            throw new SourceParsingRuntimeException(javaFile, e);
+        }
+    }
+
+    /**
+     * エンティティメタデータに対するプロパティコメントを結果からマージします。
+     * すでに設定されているプロパティは上書きしません。
+     * 
+     * @param entityMeta
+     *            エンティティメタデータ
+     * @param result
+     *            Javadocの読み取り結果
+     * @param processedPropertyNameSet
+     *            処理済みプロパティ名のセット
+     */
+    protected void mergePropertyComments(EntityMeta entityMeta,
+            JavadocResult result, Set<String> processedPropertyNameSet) {
+        for (PropertyMeta propertyMeta : entityMeta.getAllPropertyMeta()) {
+            String name = propertyMeta.getName();
+            if (processedPropertyNameSet.contains(name)) {
+                continue;
+            }
+            String comment = result.fieldCommentMap.get(name);
+            if (comment == null) {
+                continue;
+            }
+            PropertyMetaUtil.setComment(propertyMeta, comment);
+            processedPropertyNameSet.add(name);
+        }
+    }
+
+    /**
+     * クラスに対応するJavaソースファイルを検索します。
+     * 
+     * @param clazz
+     *            クラス
+     * @return Javaソースファイル、見つからない場合は{@code null}
+     */
+    protected File findJavaFile(Class<?> clazz) {
+        String className = clazz.getName();
+        String relativePath = className.replace('.', File.separatorChar)
+                + ".java";
+        for (File srcDir : javaFileSrcDirList) {
+            File file = new File(srcDir, relativePath);
+            if (file.exists() && file.isFile()) {
+                return file;
+            }
+        }
+        return null;
     }
 
     public boolean isFiltered() {

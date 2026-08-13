@@ -52,6 +52,18 @@ public class MockPortletRequestImpl implements MockPortletRequest {
 
     private int serverPort = 80;
 
+    private PortletMode portletMode = PortletMode.VIEW;
+
+    private WindowState windowState = WindowState.NORMAL;
+
+    private PortletPreferences preferences;
+
+    private PortalContext portalContext;
+
+    private Principal userPrincipal;
+
+    private Map roles = new HashMap();
+
     private Map properties = new HashMap();
 
     private Map attributes = new HashMap();
@@ -71,29 +83,65 @@ public class MockPortletRequestImpl implements MockPortletRequest {
         this.portletContext = portletContext;
     }
 
-    public boolean isWindowStateAllowed(WindowState arg0) {
-        // TODO is MockWindowState needed?
-        throw new UnsupportedOperationException();
+    public boolean isWindowStateAllowed(WindowState state) {
+        if (portalContext != null) {
+            for (Enumeration e = portalContext.getSupportedWindowStates(); e
+                    .hasMoreElements();) {
+                if (state.equals(e.nextElement())) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return WindowState.NORMAL.equals(state)
+                || WindowState.MAXIMIZED.equals(state)
+                || WindowState.MINIMIZED.equals(state);
     }
 
-    public boolean isPortletModeAllowed(PortletMode arg0) {
-        // TODO is MockPortletMode needed?
-        throw new UnsupportedOperationException();
+    public boolean isPortletModeAllowed(PortletMode mode) {
+        if (portalContext != null) {
+            for (Enumeration e = portalContext.getSupportedPortletModes(); e
+                    .hasMoreElements();) {
+                if (mode.equals(e.nextElement())) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return PortletMode.VIEW.equals(mode) || PortletMode.EDIT.equals(mode)
+                || PortletMode.HELP.equals(mode);
     }
 
     public PortletMode getPortletMode() {
-        // TODO is MockPortletMode needed?
-        throw new UnsupportedOperationException();
+        return portletMode;
+    }
+
+    public void setPortletMode(PortletMode portletMode) {
+        this.portletMode = portletMode;
     }
 
     public WindowState getWindowState() {
-        // TODO is MockWindowState needed?
-        throw new UnsupportedOperationException();
+        return windowState;
+    }
+
+    public void setWindowState(WindowState windowState) {
+        this.windowState = windowState;
     }
 
     public PortletPreferences getPreferences() {
-        // TODO is MockPortletPreferences needed?
-        throw new UnsupportedOperationException();
+        if (preferences == null) {
+            preferences = new MockPortletPreferencesImpl();
+        }
+        return preferences;
+    }
+
+    /**
+     * {@link PortletPreferences}を設定します。
+     *
+     * @param preferences
+     */
+    public void setPreferences(PortletPreferences preferences) {
+        this.preferences = preferences;
     }
 
     public PortletSession getPortletSession() {
@@ -143,8 +191,19 @@ public class MockPortletRequestImpl implements MockPortletRequest {
     }
 
     public PortalContext getPortalContext() {
-        // TODO is MockPortalContext needed?
-        throw new UnsupportedOperationException();
+        if (portalContext == null) {
+            portalContext = new MockPortalContextImpl();
+        }
+        return portalContext;
+    }
+
+    /**
+     * {@link PortalContext}を設定します。
+     *
+     * @param portalContext
+     */
+    public void setPortalContext(PortalContext portalContext) {
+        this.portalContext = portalContext;
     }
 
     public String getAuthType() {
@@ -160,11 +219,34 @@ public class MockPortletRequestImpl implements MockPortletRequest {
     }
 
     public Principal getUserPrincipal() {
-        throw new UnsupportedOperationException();
+        return userPrincipal;
     }
 
-    public boolean isUserInRole(String arg0) {
-        throw new UnsupportedOperationException();
+    /**
+     * {@link Principal}を設定します。
+     *
+     * @param userPrincipal
+     */
+    public void setUserPrincipal(Principal userPrincipal) {
+        this.userPrincipal = userPrincipal;
+    }
+
+    public boolean isUserInRole(String role) {
+        Boolean value = (Boolean) roles.get(role);
+        if (value != null) {
+            return value.booleanValue();
+        }
+        return false;
+    }
+
+    /**
+     * ユーザがロールに含まれるかどうかを設定します。
+     *
+     * @param role
+     * @param inRole
+     */
+    public void setUserInRole(String role, boolean inRole) {
+        roles.put(role, Boolean.valueOf(inRole));
     }
 
     public Object getAttribute(String name) {

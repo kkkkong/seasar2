@@ -1,94 +1,87 @@
-# Seasar2 - S2Container
+# Seasar2 — S2Container
 
-A lightweight, high-performance dependency injection (DI) container with powerful aspect-oriented programming (AOP) capabilities for Java applications. S2Container provides seamless integration with database access, transaction management, and comprehensive testing utilities.
+**A lightweight, high-performance Dependency Injection (DI) container with powerful Aspect-Oriented Programming (AOP) capabilities for Java applications.**
 
-**Website:** [s2container.seasar.org](http://s2container.seasar.org/)
+[![JDK](https://img.shields.io/badge/JDK-8%20%7C%2011%20%7C%2017%20%7C%2021-blue?logo=openjdk)](MIGRATION_GUIDE.md#55-jdk-version-compatibility-matrix)
+[![Maven](https://img.shields.io/badge/Maven-3.0+-C71A36?logo=apachemaven)](https://maven.apache.org/)
+[![CI](https://github.com/kkkkong/seasar2/actions/workflows/maven-ci.yml/badge.svg)](https://github.com/kkkkong/seasar2/actions/workflows/maven-ci.yml)
+[![License](https://img.shields.io/badge/License-Apache%202.0-green)](seasar2/LICENSE.txt)
+[![Status](https://img.shields.io/badge/Status-Modernized%20Fork-brightgreen)](#about-this-fork)
+
+> **This is a modernized fork** of the original [seasarorg/seasar2](https://github.com/seasarorg/seasar2) framework, upgraded to support JDK 8, 11, 17, and 21 with critical security patches for XXE and OGNL injection vulnerabilities, updated `s2jdbc-gen` to use JavaParser instead of the removed `com.sun.javadoc` API, and 100% green test suite across all supported JDKs.
+
+**Original Project:** [s2container.seasar.org](http://s2container.seasar.org/)
+
+---
+
+## About This Fork
+
+The original Seasar2 framework — first released in 2004 by [The Seasar Foundation](http://www.seasarfoundation.org/) — was a pioneering DI/AOP container for Java. This fork modernizes the codebase to run on contemporary JDK versions while maintaining full backward compatibility with existing Seasar2 applications.
+
+### Modernization Highlights
+
+| Area | Status | Details |
+|---|---|---|
+| **JDK 8 / 11 / 17 / 21** | ✅ Supported | Full build and runtime compatibility; multi-JDK CI tested |
+| **XXE Protection** | ✅ Patched | XML parsers hardened against external entity attacks |
+| **OGNL Sandbox** | ✅ Patched | Expression evaluator locked down against RCE |
+| **Test Suite** | ✅ Passing | 100% green test suite across all 4 JDK versions |
+| **`s2jdbc-gen` JavaParser** | ✅ Refactored | Replaced `com.sun.javadoc` Doclet API with `com.github.javaparser:javaparser-core:3.25.10` for cross-JDK compilation |
+| **Mock Portlet Extensions** | ✅ Implemented | State-backed `MockPortletRequestImpl`, `MockPortalContextImpl`, `MockPortletPreferencesImpl` replacing `UnsupportedOperationException` |
+
+---
+
+## JDK Compatibility
+
+| JDK Version | Build | Runtime | CI Tested | Notes |
+|---|---|---|---|---|
+| **JDK 8** | ✅ | ✅ | ✅ | Full compatibility; `tools.jar` not required for `s2jdbc-gen` (JavaParser-based) |
+| **JDK 11** | ✅ | ✅ | ✅ | `--add-opens` JVM flags required (see [Migration Guide](MIGRATION_GUIDE.md#1-jvm-arguments-java-9)) |
+| **JDK 17** | ✅ | ✅ | ✅ | Primary target; `--add-opens` JVM flags required |
+| **JDK 21** | ✅ | ✅ | ✅ | `--add-opens` JVM flags required; fully tested in CI |
+
+> For detailed JVM configuration per JDK version, see the **[Migration Guide](MIGRATION_GUIDE.md#1-jvm-arguments-java-9)**.
 
 ---
 
 ## Features
 
-- **Lightweight DI Container** - Automatic dependency injection with minimal configuration
-- **Powerful AOP Framework** - Aspect-oriented programming with dynamic proxy support
-- **S2JDBC** - High-performance database access with automatic SQL binding
-- **S2DBCP** - Database connection pooling
-- **S2Tx** - Declarative transaction management (JTA/JDBC)
-- **S2Unit** - Integration testing framework
-- **S2Dxo** - Data transfer object mapping utilities
-- **Convention over Configuration** - Automatic component discovery and wiring
-- **JPA Support** - Java Persistence API integration
-- **Multi-database Support** - Works with Derby, H2, HSQLDB, MySQL, PostgreSQL, Oracle, and more
+- **Lightweight DI Container** — Automatic dependency injection with minimal configuration
+- **Powerful AOP Framework** — Aspect-oriented programming with dynamic proxy support
+- **S2JDBC** — High-performance database access with automatic SQL binding
+- **S2DBCP** — Database connection pooling
+- **S2Tx** — Declarative transaction management (JTA/JDBC)
+- **S2Unit** — Integration testing framework
+- **S2Dxo** — Data transfer object mapping utilities
+- **Convention over Configuration** — Automatic component discovery and wiring
+- **JPA Support** — Java Persistence API integration
+- **Multi-database Support** — Derby, H2, HSQLDB, MySQL, PostgreSQL, Oracle, DB2, SQL Server
 
 ---
 
-## Stack
+## Security Hardening
 
-- **Language:** Java 1.4+ (with backward compatibility)
-- **Build System:** Maven 3
-- **Framework:** Seasar2 (v2.4.49-SNAPSHOT)
-- **Notable Libraries:**
-  - Javassist 3.4 - Bytecode manipulation
-  - OGNL 2.6.9 - Object-Graph Navigation Language
-  - Apache Commons Logging 1.1 - Logging abstraction
-  - AOP Alliance 1.0 - AOP standards
-  - JUnit 3.8.2 / 4.4 - Testing framework
+### XXE (XML External Entity) Protection
 
----
+All XML parsers used for `.dicon` file loading have been hardened against XXE injection:
 
-## Project Structure
+- [`SAXParserFactoryUtil.newInstance()`](seasar2/s2-framework/src/main/java/org/seasar/framework/util/SAXParserFactoryUtil.java:47): DOCTYPE, external entities, and XInclude explicitly disabled
+- [`DocumentBuilderFactoryUtil.newInstance()`](seasar2/s2-framework/src/main/java/org/seasar/framework/util/DocumentBuilderFactoryUtil.java:43): Same hardening applied to DOM parser factory
+- [`XmlS2ContainerBuilder.createSaxHandlerParser()`](seasar2/s2-framework/src/main/java/org/seasar/framework/container/factory/XmlS2ContainerBuilder.java:185): DTD validation re-enabled for `.dicon` schema validation while keeping external entities blocked
 
-```
-├── seasar2/                         # Root Maven project
-│   ├── s2-framework/               # Core DI and AOP engine
-│   │   ├── aop/                    # AOP implementation (interceptors, invocations)
-│   │   ├── container/              # S2Container core (dependency resolution)
-│   │   ├── beans/                  # Bean metadata and property inspection
-│   │   ├── unit/                   # S2Unit testing utilities
-│   │   ├── util/                   # Common utilities
-│   │   └── xml/                    # XML configuration parsing
-│   ├── s2-extension/               # Database and extension libraries
-│   │   ├── jdbc/                   # S2JDBC - SQL execution and binding
-│   │   ├── dao/                    # DAO pattern utilities
-│   │   ├── dbcp/                   # Connection pooling
-│   │   ├── dataset/                # Test data fixtures
-│   │   ├── dxo/                    # Data transfer objects
-│   │   ├── tx/                     # Transaction management
-│   │   ├── jta/                    # JTA transaction handling
-│   │   └── unit/                   # Integration testing
-│   ├── s2-dist/                    # Distribution packaging
-│   ├── s2-framework/               # Framework pom
-│   └── pom.xml                     # Parent pom (v2.4.49-SNAPSHOT)
-├── s2-tiger/                       # Annotations and advanced features
-│   ├── org.seasar.extension.jdbc*  # S2JDBC with annotations
-│   ├── org.seasar.extension.dxo*   # S2Dxo
-│   └── org.seasar.extension.tx*    # Advanced transaction support
-├── s2jdbc-gen/                     # Code generation tool
-├── s2jdbc-gen-it/                  # Integration tests for generator
-├── s2jdbc-tutorial/                # Tutorial and examples
-└── pom.xml                         # Top-level module aggregator
-```
+### OGNL Expression Sandbox
 
-### How It Fits Together
+A new security sandbox prevents Remote Code Execution (RCE) through OGNL expressions in `.dicon`, S2JDBC SQL templates, and JSP views:
 
-The project follows a layered architecture:
+| Blocked Operation | Risk Mitigated |
+|---|---|
+| `Runtime.exec()` / `ProcessBuilder` | System command execution |
+| `System.exit()` | JVM termination / DoS |
+| `Class.forName()` | Arbitrary class loading |
+| `ClassLoader` access | Classloader manipulation |
+| Reflective `invoke()` / `setAccessible()` | Access-control bypass |
 
-1. **S2 Framework** (Core)
-   - `S2Container` manages component lifecycle and dependency injection
-   - `AOP` framework provides cross-cutting concerns via dynamic proxies
-   - `BeanDesc` and reflection utilities enable property inspection
-   - `S2Unit` integrates testing with the container
-
-2. **S2 Extension** (Database & Utilities)
-   - `S2JDBC` executes SQL with automatic parameter binding
-   - `DAO` utilities simplify CRUD operations
-   - `DBCP` manages database connections
-   - `Tx` handles declarative transactions (method-level)
-   - `Dxo` maps data between objects
-
-3. **S2 Tiger** (Annotations & Java 5+ Features)
-   - Provides `@Tx`, `@Dxo`, `@Query` annotations
-   - EJB 3.0 and JPA annotations support
-   - Code generation with FreeMarker templates
+> ⚠️ **Legacy applications** that use these operations in OGNL expressions will need migration. See the [Migration Guide](MIGRATION_GUIDE.md#2-ognl-security-sandbox) for safe alternatives.
 
 ---
 
@@ -96,45 +89,65 @@ The project follows a layered architecture:
 
 ### Prerequisites
 
-- Java 1.4+ (JDK 6+ recommended for best compatibility)
+- Java 8 or later (JDK 8, 11, 17, and 21 are supported; JDK 17+ recommended for production)
 - Maven 3.0+
 
 ### Build from Source
 
-```bash
-# Clone the repository
-git clone https://github.com/kkkkong/seasar2.git
-cd seasar2
+**Build order matters** due to inter-module dependencies:
 
-# Build core framework
+```bash
+# Step 1: Build core framework (s2-framework + s2-extension)
 cd seasar2
 mvn clean install
 
-# Build extensions
+# Step 2: Build annotation-based extensions (s2-tiger)
 cd ../s2-tiger
 mvn clean install
 
-# Build code generation tools
+# Step 3: Build code generation tool (s2jdbc-gen)
 cd ../s2jdbc-gen
 mvn clean install
-
-# Generate from integration tests (optional)
-cd ../s2jdbc-gen-it
-mvn clean test
 ```
+
+> **Important:** Run `mvn clean install` from each **module directory** — NOT the repository root. The root [`pom.xml`](pom.xml) is an aggregator-only POM (`<packaging>pom</packaging>`).
 
 ### Running Tests
 
 ```bash
 # Run all tests
-mvn test
+mvn clean test
 
-# Run with specific database (default: hsqldb)
-mvn test -Pdatabase
+# Run a single test class
+mvn test -Dtest=ClassName
 
-# Supported profiles: standard, hsqldb, h2, postgre, mysql, oracle, db2, mssql2005
-mvn test -Ppostgre
+# Run with specific database profile
+mvn test -Ppostgre      # PostgreSQL
+mvn test -Pmysql        # MySQL
+mvn test -Ph2           # H2 (embedded)
+mvn test -Phsqldb       # HSQLDB (default)
+
+# Skip tests during build
+mvn clean install -DskipTests
 ```
+
+### Running on Java 17+
+
+When deploying on **JDK 17+** (also compatible with JDK 11), add the following `--add-opens` JVM flags to your application server or startup script. These flags allow Seasar2's reflection-based DI container, AOP proxies, OGNL expression evaluation, and HotdeployBehavior to access internal JDK modules:
+
+```bash
+--add-opens=java.base/java.math=ALL-UNNAMED
+--add-opens=java.base/java.net=ALL-UNNAMED
+--add-opens=java.base/java.lang=ALL-UNNAMED
+--add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+--add-opens=java.base/java.util=ALL-UNNAMED
+--add-opens=java.base/java.text=ALL-UNNAMED
+--add-opens=java.base/java.io=ALL-UNNAMED
+```
+
+> These flags are applied automatically during Maven Surefire test execution via the `jdk9plus` profile. For application runtime (IDE, `java` command line, application server), add them to your startup script or `JAVA_OPTS`.
+>
+> For detailed configuration examples, see the [Migration Guide — JVM Arguments](MIGRATION_GUIDE.md#1-jvm-arguments-java-9).
 
 ### Maven Dependency
 
@@ -147,14 +160,12 @@ Add to your `pom.xml`:
   <version>2.4.49</version>
 </dependency>
 
-<!-- For database access and extensions -->
 <dependency>
   <groupId>org.seasar.container</groupId>
   <artifactId>s2-extension</artifactId>
   <version>2.4.49</version>
 </dependency>
 
-<!-- For annotations and advanced features -->
 <dependency>
   <groupId>org.seasar.container</groupId>
   <artifactId>s2-tiger</artifactId>
@@ -164,90 +175,109 @@ Add to your `pom.xml`:
 
 ---
 
-## Core Components
+## Project Structure
 
-### S2 Framework
+```
+├── seasar2/                              # Root Maven project (aggregator)
+│   ├── s2-framework/                     # Core DI and AOP engine
+│   │   ├── aop/                          # AOP implementation (interceptors, invocations)
+│   │   ├── container/                    # S2Container core (dependency resolution)
+│   │   ├── beans/                        # Bean metadata and property inspection
+│   │   ├── util/                         # Common utilities
+│   │   └── xml/                          # XML configuration parsing
+│   ├── s2-extension/                     # Database and extension libraries
+│   │   ├── jdbc/                         # S2JDBC — SQL execution and binding
+│   │   ├── dao/                          # DAO pattern utilities
+│   │   ├── dbcp/                         # Connection pooling
+│   │   ├── tx/                           # Transaction management
+│   │   └── dxo/                          # Data transfer objects
+│   ├── s2-dist/                          # Distribution packaging
+│   └── pom.xml                           # Parent POM
+├── s2-tiger/                             # Annotations & Java 5+ features
+│   ├── @Tx, @Dxo, @Query annotations
+│   ├── EJB 3.0 / JPA support
+│   └── JUnit 4 integration
+├── s2jdbc-gen/                           # Entity code generation tool
+├── s2jdbc-gen-it/                        # Integration tests for s2jdbc-gen
+├── s2jdbc-tutorial/                      # Tutorial and examples
+└── pom.xml                               # Top-level module aggregator
+```
 
-The foundation of Seasar2, providing:
+### How It Fits Together
 
-- **Container** - IoC/DI dependency resolution engine
-- **AOP** - Aspect-oriented programming with method interceptors
-- **BeanDesc** - Introspection and metadata caching
-- **Convention** - Auto-detection and naming conventions
-- **Unit** - TestCase integration for component testing
+1. **S2 Framework** (Core) — `S2Container` manages component lifecycle and DI; AOP provides cross-cutting concerns via dynamic proxies; `BeanDesc` enables property inspection.
 
-Key classes:
-- `S2Container` - Main container interface
-- `S2ContainerImpl` - Default implementation
-- `Interceptor` - AOP interceptor interface
-- `BeanDesc` - Bean metadata descriptor
+2. **S2 Extension** (Database & Utilities) — `S2JDBC` for SQL execution with automatic binding; `DAO` for CRUD operations; `DBCP` for connection pooling; `Tx` for declarative transactions.
 
-### S2 Extension
-
-Database and utility extensions:
-
-- **S2JDBC** - Object-relational mapping and SQL execution
-- **DAO** - Data access object patterns
-- **DBCP** - Connection pooling
-- **Tx** - Transaction management
-- **Dxo** - Data transfer objects
-- **Unit** - Integration testing utilities
-
-Key classes:
-- `S2Jdbc` - SQL execution
-- `StatementFactory` - SQL statement generation
-- `ConnectionPool` - Connection management
-- `TxInterceptor` - Transaction aspect
-
-### S2 Tiger
-
-Java 5+ features and annotations:
-
-- Annotation support (`@Tx`, `@Dxo`, `@Query`)
-- EJB 3.0 compatibility
-- JPA integration
-- Advanced code generation
+3. **S2 Tiger** (Annotations) — `@Tx`, `@Dxo`, `@Query` annotations; EJB 3.0 / JPA compatibility; FreeMarker-based code generation.
 
 ---
 
-## Configuration
+## Documentation
 
-### XML Configuration Example
+| Document | Description |
+|---|---|
+| [**Changelog**](CHANGELOG.md) | Detailed list of all changes in this modernized release |
+| [**Migration Guide**](MIGRATION_GUIDE.md) | Step-by-step upgrade instructions (JVM args, OGNL sandbox, CLDR note, build) |
+| [**Technical Debt & Future Work**](TECHNICAL_DEBT_ISSUES.md) | Known limitations and planned improvements |
+| [**Development Guide**](DEVELOPMENT.md) | Build and contribution instructions |
+| [**Contributing**](CONTRIBUTING.md) | How to contribute to this project |
+
+---
+
+## Upgrading from Legacy Seasar2
+
+If you are migrating from the original `seasarorg/seasar2`, see the **[Migration Guide](MIGRATION_GUIDE.md)** for:
+
+- Required `--add-opens` JVM flags for JDK 9+
+- OGNL expression migration patterns
+- Date format CLDR provider notes
+- Maven build configuration updates
+
+---
+
+## Configuration Example
+
+### `.dicon` File (XML-based IoC Config)
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<beans xmlns="http://www.seasar.org/schema/beans"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="http://www.seasar.org/schema/beans
-       http://www.seasar.org/schema/beans.xsd">
-
-  <!-- Define components -->
-  <component name="datasource" class="org.seasar.extension.datasource.DataSourceImpl">
+<!DOCTYPE components PUBLIC
+  "-//SEASAR//DTD S2Container 2.4//EN"
+  "http://www.seasar.org/dtd/components24.dtd">
+<components>
+  <component name="dataSource" class="org.seasar.extension.dbcp.impl.DataSourceImpl">
     <property name="driverClassName">org.hsqldb.jdbcDriver</property>
     <property name="url">jdbc:hsqldb:mem:testdb</property>
     <property name="user">sa</property>
     <property name="password"></property>
   </component>
 
-  <component name="userDao" class="example.dao.UserDao"/>
-  
-  <!-- Service with dependency injection -->
-  <component name="userService" class="example.service.UserService">
+  <component name="userDao" class="com.example.dao.UserDao" />
+
+  <component name="userService" class="com.example.service.UserService">
     <property name="userDao">userDao</property>
   </component>
-
-</beans>
+</components>
 ```
 
-### Convention-based Configuration
-
-Seasar2 automatically detects and wires components:
+### Test Case (S2Unit)
 
 ```java
-// Automatically detected as component 'helloService'
-@Component
-public class HelloService {
-  private MessageRepository messageRepository; // Auto-wired
+public class UserDaoTest extends S2FrameworkTestCase {
+
+    private UserDao userDao;
+
+    protected void setUp() throws Exception {
+        super.setUp();
+        include(getClass().getName().replace('.', '/') + ".dicon");
+    }
+
+    public void testFindById() throws Exception {
+        User user = userDao.findById(1);
+        assertNotNull(user);
+        assertEquals("John", user.getName());
+    }
 }
 ```
 
@@ -255,134 +285,35 @@ public class HelloService {
 
 ## Database Support
 
-### Supported Databases
-
-- Apache Derby
-- H2
-- HSQLDB (default for tests)
-- MySQL
-- PostgreSQL
-- Oracle
-- IBM DB2
-- Microsoft SQL Server 2005+
-
-### Configure Database Connection
-
-```xml
-<component name="connectionPool" class="org.seasar.extension.dbcp.impl.ConnectionPoolImpl">
-  <property name="driver">org.postgresql.Driver</property>
-  <property name="url">jdbc:postgresql://localhost:5432/mydb</property>
-  <property name="user">postgres</property>
-  <property name="password">password</property>
-  <property name="maxPoolSize">10</property>
-</component>
-```
+| Database | Status |
+|---|---|
+| HSQLDB | ✅ (default for tests) |
+| H2 | ✅ |
+| Apache Derby | ✅ |
+| MySQL | ✅ |
+| PostgreSQL | ✅ |
+| Oracle | ✅ |
+| IBM DB2 | ✅ |
+| Microsoft SQL Server | ✅ |
 
 ---
 
-## Transaction Management
+## License
 
-### Declarative Transactions
-
-```java
-@Component
-public class UserService {
-  
-  @Tx
-  public void saveUser(User user) {
-    // Transaction automatically managed
-  }
-
-  @Tx(rollback = {Exception.class})
-  public void complexOperation() {
-    // Custom rollback rules
-  }
-}
-```
-
-### Supported Transaction Types
-
-- **JDBC Transactions** - Local database transactions
-- **JTA Transactions** - Distributed/container-managed transactions
-- **Read-only Transactions** - Optimized for queries
+Apache License 2.0 — See [`LICENSE.txt`](seasar2/LICENSE.txt)
 
 ---
 
-## Testing
+## Attribution
 
-### S2Unit Integration Testing
+This is a modernized fork of [seasarorg/seasar2](https://github.com/seasarorg/seasar2), originally created by:
 
-```java
-public class UserDaoTest extends S2TestCase {
-  
-  private UserDao userDao;
-  
-  protected void setUp() throws Exception {
-    super.setUp();
-    // Container automatically injects userDao
-  }
-  
-  public void testFindById() throws Exception {
-    User user = userDao.findById(1);
-    assertNotNull(user);
-    assertEquals("John", user.getName());
-  }
-}
-```
-
-### Test Data with S2Dataset
-
-```java
-public class UserServiceTest extends S2TestCase {
-  
-  public void testWithData() throws Exception {
-    // Load test data from CSV/XLS
-    UnitUtil.loadData("users.csv");
-    
-    // Test business logic
-    List<User> users = userService.findActive();
-    assertEquals(5, users.size());
-  }
-}
-```
-
----
-
-## Additional Resources
-
-### Official Documentation
-- [S2Container Documentation](http://s2container.seasar.org/)
-- [Seasar Forum](https://www.seasar.org/mailman/listinfo/seasar-user)
-
-### Mailing Lists
-- **Seasar-user** - General user discussions
-- **Seasar-dev** - Development discussions
-- **Seasar-user-en** - English-language support
-
-### License
-
-Apache License 2.0 - See [LICENSE.txt](seasar2/LICENSE.txt)
-
----
-
-## Project Information
-
-**Version:** 2.4.49-SNAPSHOT  
-**Inception Year:** 2004  
-**Organization:** [The Seasar Foundation](http://www.seasarfoundation.org/)
-
-### Key Contributors
-
-- HIGA Yasuo (Lead Architect)
+- **HIGA Yasuo** (Lead Architect)
 - SATO Taichi
 - KOBAYASHI Koichi
 - YOKOTA Takehiko
 - HONMA Hirotaka
 - KOMORI Yusuke
-- And many others (see pom.xml for full credits)
+- And many contributors to [The Seasar Foundation](http://www.seasarfoundation.org/)
 
----
-
-## Related Projects
-
-This is a fork of the official [seasarorg/seasar2](https://github.com/seasarorg/seasar2) repository. For the upstream project, please refer to the official GitHub organization.
+**Original Project Inception:** 2004

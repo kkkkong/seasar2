@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.Map.Entry;
 
 import javax.persistence.EntityManagerFactory;
+import javax.persistence.PersistenceException;
 import javax.persistence.spi.PersistenceProvider;
 import javax.persistence.spi.PersistenceUnitInfo;
 
@@ -133,7 +134,8 @@ public class ContainerPersistenceUnitProvider extends
         final PersistenceUnitInfoImpl unitInfo = (PersistenceUnitInfoImpl) persistenceUnitInfoRegistry
                 .getPersistenceUnitInfo(concreteUnitName);
         if (unitInfo == null) {
-            throw new IllegalArgumentException(concreteUnitName); // TODO
+            throw new PersistenceException(
+                    "Persistence unit not found: " + concreteUnitName);
         }
         overrideUnitInfo(unitInfo);
 

@@ -12,3 +12,11 @@
 
 # Build output
 **/target/
+
+# Local build artifacts
+**/cp.txt
+
+# Research/inspection scripts
+scripts/extract-issue15.ps1
+scripts/fetch-upstream-github.ps1
+scripts/upstream-*.json
