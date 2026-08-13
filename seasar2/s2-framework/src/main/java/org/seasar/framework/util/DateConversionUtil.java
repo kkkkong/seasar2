@@ -191,8 +191,15 @@ public class DateConversionUtil {
                 DateFormat.SHORT, locale);
         String pattern = df.toPattern();
         int index = pattern.indexOf(' ');
-        if (index > 0) {
+        if (index != -1) {
+            // JDK 9+ (CLDR, JEP 252) may append a time component after a space
+            // (e.g. "y/MM/dd H:mm"). Strip it to keep a date-only pattern.
             pattern = pattern.substring(0, index);
+        }
+        if (pattern.indexOf("yy") < 0) {
+            // Normalize a single-year symbol 'y' to 'yy' so the pattern keeps
+            // a consistent shape for delimiter-less length matching.
+            pattern = StringUtil.replace(pattern, "y", "yy");
         }
         if (pattern.indexOf("MM") < 0) {
             pattern = StringUtil.replace(pattern, "M", "MM");
