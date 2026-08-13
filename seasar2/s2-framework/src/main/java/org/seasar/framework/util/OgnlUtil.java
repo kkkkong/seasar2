@@ -21,9 +21,12 @@ import ognl.ClassResolver;
 import ognl.Ognl;
 import ognl.OgnlContext;
 import ognl.OgnlException;
+import ognl.OgnlRuntime;
 
 import org.seasar.framework.container.S2Container;
 import org.seasar.framework.exception.OgnlRuntimeException;
+import org.seasar.framework.util.Disposable;
+import org.seasar.framework.util.DisposableUtil;
 
 /**
  * Ognl用のユーティリティクラスです。
@@ -32,6 +35,23 @@ import org.seasar.framework.exception.OgnlRuntimeException;
  * 
  */
 public class OgnlUtil {
+
+    private static boolean initialized = false;
+
+    static {
+        initialize();
+    }
+
+    public static synchronized void initialize() {
+        if (!initialized) {
+            DisposableUtil.add(new Disposable() {
+                public void dispose() {
+                    OgnlRuntime.clearCache();
+                }
+            });
+            initialized = true;
+        }
+    }
 
     /**
      * インスタンスを構築します。
