@@ -132,8 +132,8 @@
       <groupId>com.ibm.websphere</groupId>
       <artifactId>uow_api</artifactId>
       <version>6</version>
-      <type>jar</type>
-      <scope>provided</scope>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/../lib/uow_api-6.jar</systemPath>
       <optional>true</optional>
     </dependency>
   </dependencies>
