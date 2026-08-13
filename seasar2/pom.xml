@@ -507,6 +507,11 @@
                   --add-opens=java.base/java.util=ALL-UNNAMED
                   --add-opens=java.base/java.text=ALL-UNNAMED
                   --add-opens=java.base/java.io=ALL-UNNAMED
+                  -Djava.locale.providers=CLDR,JRE
+                  -Duser.timezone=Asia/Tokyo
+                  -Duser.language=ja
+                  -Duser.country=JP
+                  -Dfile.encoding=UTF-8
                 </argLine>
               </configuration>
             </plugin>
