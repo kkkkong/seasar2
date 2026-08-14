@@ -11,11 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.4.49] — Modernization Release
+## [2.4.49.1] — Modernization Release
 
 ### Migration Guide
 
-For detailed upgrade instructions, see the **[v2.4.49 Migration Guide](MIGRATION_GUIDE.md#v2-4-49-migration-guide)** covering:
+For detailed upgrade instructions, see the **[v2.4.49.1 Migration Guide](MIGRATION_GUIDE.md#v2-4-49-migration-guide)** covering:
 
 - `--add-opens` JVM flags for JDK 9+ / Java 17+ deployments
 - OGNL upgrade and `OgnlRuntime.clearCache()` memory-leak fix

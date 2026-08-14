@@ -157,19 +157,19 @@ Add to your `pom.xml`:
 <dependency>
   <groupId>org.seasar.container</groupId>
   <artifactId>s2-framework</artifactId>
-  <version>2.4.49</version>
+  <version>2.4.49.1</version>
 </dependency>
 
 <dependency>
   <groupId>org.seasar.container</groupId>
   <artifactId>s2-extension</artifactId>
-  <version>2.4.49</version>
+  <version>2.4.49.1</version>
 </dependency>
 
 <dependency>
   <groupId>org.seasar.container</groupId>
   <artifactId>s2-tiger</artifactId>
-  <version>2.4.49</version>
+  <version>2.4.49.1</version>
 </dependency>
 ```
 

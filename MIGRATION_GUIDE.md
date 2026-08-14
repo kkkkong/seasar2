@@ -7,7 +7,7 @@ This guide covers the required steps when migrating your Seasar2-based applicati
 ## Table of Contents
 
 1. [JVM Arguments (Java 9+)](#1-jvm-arguments-java-9)
-2. [v2.4.49 Migration Guide](#v2-4-49-migration-guide)
+2. [v2.4.49.1 Migration Guide](#v2-4-49-migration-guide)
 3. [OGNL Security Sandbox](#2-ognl-security-sandbox)
 4. [s2jdbc-gen: Doclet API → JavaParser Migration](#3-s2jdbc-gen-doclet-api--javaparser-migration)
 5. [Java 8 CLDR Note](#4-java-8-cldr-note)
@@ -118,9 +118,9 @@ On **JDK 17+**, the `java17-plus-surefire` Maven profile is auto-activated and a
 
 ---
 
-## v2.4.49 Migration Guide
+## v2.4.49.1 Migration Guide
 
-This section summarizes the key changes introduced in the **v2.4.49 modernization release** and the actions required when upgrading from earlier Seasar2 versions.
+This section summarizes the key changes introduced in the **v2.4.49.1 modernization release** and the actions required when upgrading from earlier Seasar2 versions.
 
 ### OGNL Upgrade
 
@@ -419,7 +419,7 @@ If you are upgrading an application from the original Seasar 2.4.x (`seasarorg/s
 
 #### Phase 2: Dependency Update
 
-- [ ] **Update Maven/Gradle dependencies**: Change Seasar2 artifact versions from `2.4.x` to `2.4.49`
+- [ ] **Update Maven/Gradle dependencies**: Change Seasar2 artifact versions from `2.4.x` to `2.4.49.1`
 - [ ] **Remove any `tools.jar` references** from build scripts if they were needed for `s2jdbc-gen` (no longer required)
 - [ ] **Add `com.github.javaparser:javaparser-core:3.25.10`** to `s2jdbc-gen` dependencies if building from source
 
@@ -457,7 +457,7 @@ If you are upgrading an application from the original Seasar 2.4.x (`seasarorg/s
 |---|---|---|
 | `InaccessibleObjectException` at startup | Missing `--add-opens` flags | Add all four flags (see [Section 1](#1-jvm-arguments-java-9)) |
 | `SecurityException: Access denied` in OGNL | OGNL expression blocked by sandbox | Migrate expression to Java code (see [Section 2.4](#24-migration-for-affected-expressions)) |
-| `[ESSR0094] Can not set field` on HOT deploy | Issue #15 ClassLoader mismatch | Fixed in this release; ensure you are on `2.4.49` |
+| `[ESSR0094] Can not set field` on HOT deploy | Issue #15 ClassLoader mismatch | Fixed in this release; ensure you are on `2.4.49.1` |
 | `PersistenceException: Persistence unit not found: X` | Missing persistence unit | Now throws clear `PersistenceException` with unit name |
 | `s2jdbc-gen` build fails on JDK 21 | Old version using `com.sun.javadoc` | Update to modernized `s2jdbc-gen` with JavaParser |
 | Date-format test failures on JDK 8 | CLDR vs JRE locale provider | Expected; use `-Djava.locale.providers=CLDR,JRE` (see [Section 4.3](#43-workaround-for-jdk-8-test-execution)) |
